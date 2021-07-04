@@ -1,0 +1,568 @@
+---
+title: "exploration_and_data_cleaning"
+author: "Aditya Ponnada"
+date: "7/3/2021"
+output: html_document
+---
+
+## Import libraries
+```{r}
+
+library(psych)
+library(reshape2)
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(plotly)
+options(digits = 4)
+options(digits.secs = 3)
+library(corrplot)
+
+```
+
+## Read and combine the report files
+Read all the report files and combine them into one data frame for analysis
+```{r}
+
+report_file_loc = "D:/TIME_CLUSTER_PREPROCESSED_20210702/daily_report/"
+
+file_pattern <- paste0(report_file_loc, '*@timestudy_com.csv')
+
+file_matches <- Sys.glob(file_pattern)
+
+daily_report_df <- do.call(rbind, lapply(file_matches, read.csv))
+
+```
+
+
+## Stitch changed ids together
+For some participants the ID was changed. So we merge those rows together
+```{r}
+daily_report_df$participant_ID[daily_report_df$participant_ID == "upliftedsulfatedreamboat@timestudy_com"] <- "startlingrevengevillage@timestudy_com"
+```
+
+## Read the watch assignment file
+This file is needed to:
+1. Filter time dates with uEMA that occurred before the official watch training
+2. also filter out the participants that have been unenrolled in the first two bursts before the watch was even assigned
+
+Note: In this file, participant status codes mean:
+
+1=first burst
+2=active
+3= staff unenrolled
+4=participant withdrew
+5=competed
+
+```{r}
+
+participant_status_df <- read.csv(file = "D:/TIME_CLUSTER_PREPROCESSED_20210702/TIMEMAIN-ParticipantTrackingC_DATA_2021-06-30_0732.csv", sep = ",", header = TRUE)
+
+names(participant_status_df) <- c("record_id", "participant_id", "participant_status", "watch_assign_date", "device_tracking")
+
+participant_status_df$participant_id <- paste0(participant_status_df$participant_id, "@timestudy_com")
+
+```
+
+Remove participants who were never assigned a single watch
+```{r}
+
+no_watch_assigned_df <- subset(participant_status_df, participant_status_df$watch_assign_date == "")
+
+no_watch_users = unique(no_watch_assigned_df$participant_id)
+
+```
+
+Keep a dataframe of watch assigned participants
+```{r}
+
+watch_users_df <- subset(participant_status_df, participant_status_df$watch_assign_date != "")
+
+```
+
+
+Convert the watch assignment date into date time stamp or object for future filtering
+```{r}
+
+watch_users_df$watch_training_day <- as.POSIXct(watch_users_df$watch_assign_date, format = "%Y-%m-%d")
+
+
+```
+
+
+## Filter no watch users
+Filter out users who have never been assigned a watch
+```{r}
+
+`%!in%` <- Negate(`%in%`)
+
+daily_report_subset <- subset(daily_report_df, daily_report_df$participant_ID %!in% no_watch_users)
+
+```
+
+## Create a function to filter out user names with less than six months of data in total
+We are only looking at the users who have completed at least six months in the study. Thus, we will discard any user who has not completed six months yet
+```{r}
+
+keep_six_months_completed <- function(df, num_months){
+  num_days = num_months * 30
+  # count each 'name', assign result to an object 'tt'
+  tt <- table(df$participant_ID)
+  # subset data frame by a logical vector
+  # 'TRUE' rows are kept, 'FALSE' rows are removed.
+  # assign the result to a data frame with a new name
+  df2 <- subset(df, df$participant_ID %in% names(tt[tt >= num_days]))
+  
+  return(df2)
+}
+
+
+```
+
+Use the function to keep users with at least 6 months of data
+```{r}
+
+daily_report_6m_df <- keep_six_months_completed(daily_report_df, 6)
+
+```
+
+## Convert sleep wake times to date time objects
+```{r}
+
+daily_report_6m_df$current_wake_timestamp <- as.POSIXct(daily_report_6m_df$current_wake_time, format = "%Y-%m-%d %H:%M:%OS")
+daily_report_6m_df$current_sleep_timestamp <- as.POSIXct(daily_report_6m_df$current_sleep_time, format = "%Y-%m-%d %H:%M:%OS")
+
+```
+
+## Remove days with awkward sleep duration due to error
+Check summary first
+```{r}
+
+describe(daily_report_6m_df$sleep_time_reported_hr)
+
+```
+
+Remove awkward sleep times above 24 hours
+```{r}
+
+daily_report_6m_df <- subset(daily_report_6m_df, daily_report_6m_df$sleep_time_reported_hr <= 24.0)
+
+```
+
+
+## Split the dataframe into uEMA and EMA data frames
+use TIME and BURST days study mode for separation
+```{r}
+
+time_df <- subset(daily_report_6m_df, daily_report_6m_df$study_mode == "TIME")
+burst_df <- subset(daily_report_6m_df, daily_report_6m_df$study_mode == "BURST")
+
+```
+
+keep only watch assigned days and only days after the watch assignment took place
+```{r}
+time_df <- subset(time_df, time_df$watch_assigned == "True")
+```
+
+Now only keep the dates a day after the watch training date
+```{r}
+
+time_df$date_stamp <- as.POSIXct(time_df$date, format = "%Y-%m-%d")
+
+p_ids <- unique(time_df$participant_ID)
+
+
+for (p_id in p_ids){
+  start_date <- watch_users_df$watch_training_day[watch_users_df$participant_id == p_id]
+  time_df <- time_df[!(time_df$participant_ID == p_id & time_df$date_stamp <= start_date), ]
+}
+
+```
+
+
+## Use sleep time reported to get the expected number of uEMA and burst EMA prompts
+
+Rubric to be used:
+uEMA num prompts = (24.0 - sleep_time - 0.50)*4.0 --> convert to integer
+burst EMA num prompts = (24.0 - sleep_time - 1.0)*1 --> convert to integet
+
+Define the constants
+```{r}
+
+uEMA_PER_HOUR = 4.0
+EMA_PER_HOUR = 1.0
+uEMA_BUFFER_HOUR = 0.5
+EMA_BUFFER_HOUR = 1.0
+
+DAY_HOUR = 24.0
+
+```
+
+Compute expected prompts for burst EMA
+```{r}
+
+burst_df$burst_ema_expected_num <- as.integer((DAY_HOUR - burst_df$sleep_time_reported_hr - EMA_BUFFER_HOUR)*EMA_PER_HOUR)
+
+```
+
+Compute expected promtps for uEMA
+```{r}
+
+time_df$uema_expected_num <- as.integer((DAY_HOUR - time_df$sleep_time_reported_hr - uEMA_BUFFER_HOUR)*uEMA_PER_HOUR)
+
+```
+
+## Convert response rate columns to numeric
+```{r}
+burst_df$burst_ema_completion_rate <- as.numeric(burst_df$burst_ema_completion_rate)
+burst_df$burst_ema_compliance_rate <- as.numeric(burst_df$burst_ema_compliance_rate)
+
+time_df$uema_completion_rate <- as.numeric(time_df$uema_completion_rate)
+time_df$uema_compliance_rate <- as.numeric(time_df$uema_compliance_rate)
+```
+
+if there are dates to be filtered because of technical malfunction, include that code here
+```{r}
+## To be updated here
+```
+
+
+## Create a comprehensive completion rate for uEMA
+```{r}
+
+time_df$uema_prompted_num <- as.numeric(time_df$uema_prompted_num)
+time_df$uema_completed_num <- as.numeric(time_df$uema_completed_num)
+time_df$uema_cs_completed <- as.numeric(time_df$uema_cs_completed)
+time_df$uema_partial_completed_num <- as.numeric(time_df$uema_partial_completed_num)
+time_df$uema_trivia_completed <- as.numeric(time_df$uema_trivia_completed)
+
+time_df$uema_all_completion_rate <- (time_df$uema_completed_num + time_df$uema_cs_completed + time_df$uema_trivia_completed)/time_df$uema_prompted_num
+
+```
+
+
+## Add value caps for response rates
+```{r}
+
+burst_df$burst_ema_completion_rate[burst_df$burst_ema_completion_rate >= 1.0] <- 1.0
+burst_df$burst_ema_compliance_rate[burst_df$burst_ema_compliance_rate >= 1.0] <- 1.0
+time_df$uema_completion_rate[time_df$uema_completion_rate >= 1.0] <- 1.0
+time_df$uema_compliance_rate[time_df$uema_compliance_rate >= 1.0] <- 1.0
+
+
+```
+
+
+## Plot day level completion and compliance rate for EMA (with mean median highlighted)
+
+Burst EMA completion rate
+
+```{r}
+
+describe(burst_df$burst_ema_completion_rate)
+
+mean_val = mean(burst_df$burst_ema_completion_rate)
+median_val = median(burst_df$burst_ema_completion_rate)
+
+burst_completion_plot <- ggplot(burst_df, aes(x=burst_ema_completion_rate)) + 
+  geom_histogram(binwidth = 0.05) +
+  geom_vline(aes(xintercept = mean(burst_ema_completion_rate)), data=burst_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(burst_ema_completion_rate)), data=burst_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  ggtitle("Burst EMA Completion Rate per BURST day")
+
+
+```
+
+Burst EMA compliance rate
+```{r}
+
+describe(burst_df$burst_ema_compliance_rate)
+
+mean_val = mean(burst_df$burst_ema_compliance_rate, na.rm = TRUE)
+median_val = median(burst_df$burst_ema_compliance_rate, na.rm = TRUE)
+
+bust_compliance_plot <- ggplot(burst_df, aes(x=burst_ema_compliance_rate)) + 
+  geom_histogram(binwidth = 0.05) +
+  geom_vline(aes(xintercept = mean(burst_ema_compliance_rate, na.rm = TRUE)), data=burst_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(burst_ema_compliance_rate, na.rm = TRUE)), data=burst_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  ggtitle("Burst EMA Compliance Rate per BURST day")
+
+
+```
+
+uEMA completion rate
+```{r}
+
+describe(time_df$uema_completion_rate)
+
+mean_val = mean(time_df$uema_completion_rate)
+median_val = median(time_df$uema_completion_rate)
+
+uema_completion_plot <- ggplot(time_df, aes(x=uema_completion_rate)) + 
+  geom_histogram(binwidth = 0.05) +
+  geom_vline(aes(xintercept = mean(uema_completion_rate)), data=time_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(uema_completion_rate)), data=time_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  ggtitle("uEMA Completion Rate per TIME day")
+
+```
+
+uEMA compliance rate
+```{r}
+describe(time_df$uema_compliance_rate)
+
+mean_val = mean(time_df$uema_compliance_rate, na.rm = TRUE)
+median_val = median(time_df$uema_compliance_rate, na.rm = TRUE)
+
+uema_compliance_plot <- ggplot(time_df, aes(x=uema_compliance_rate)) + 
+  geom_histogram(binwidth = 0.05) +
+  geom_vline(aes(xintercept = mean(uema_compliance_rate, na.rm = TRUE)), data=time_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(uema_compliance_rate, na.rm = TRUE)), data=time_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  ggtitle("uEMA Compliance Rate per TIME day")
+
+
+```
+
+## Get validation score and distribution
+Compute the validation score distribution for the uEMA days
+
+```{r}
+
+time_df$uema_validation_perc <- as.numeric(time_df$uema_validation_perc)
+
+describe(time_df$uema_validation_perc)
+
+mean_val = mean(time_df$uema_validation_perc, na.rm = TRUE)
+median_val = median(time_df$uema_validation_perc, na.rm = TRUE)
+
+uema_validation_plot <- ggplot(time_df, aes(x=uema_validation_perc)) + 
+  geom_histogram(binwidth = 0.05) +
+  geom_vline(aes(xintercept = mean(uema_validation_perc, na.rm = TRUE)), data=time_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(uema_validation_perc, na.rm = TRUE)), data=time_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  ggtitle("uEMA Validation Rate per TIME day")
+
+
+
+```
+
+## Create participant level data frames
+This data frame is to get a wide form for each participant
+
+First, we start with the time_df for uema
+
+```{r}
+
+time_keep_cols <- c("participant_ID", "uema_completed_num", "uema_prompted_num", "uema_expected_num", "uema_validation_perc")
+
+selected_TIME_df <- time_df[, time_keep_cols]
+
+```
+
+Now create a function to return the completely aggregated df
+```{r}
+
+aggregate_time_df <- function(df){
+  
+  df1 <- df[, c("participant_ID", "uema_completed_num", "uema_prompted_num", "uema_expected_num")]
+  num_time_days_df <- df %>% count(participant_ID)
+  df2 <- aggregate(.~participant_ID, df1, sum)
+  df3 <- aggregate(uema_validation_perc~participant_ID, df, mean, na.rm=TRUE, na.action=na.pass)
+  df2$num_time_days <- num_time_days_df$n
+  df2 <- join(df2, df3)
+  return(df2)
+  
+}
+
+```
+
+Use the function to get the aggregate df
+
+```{r}
+
+time_pid_df <- aggregate_time_df(selected_TIME_df)
+
+```
+
+Add compliance and completion rate columns
+
+```{r}
+
+time_pid_df$uema_completion_rate <- time_pid_df$uema_completed_num/time_pid_df$uema_prompted_num
+time_pid_df$uema_compliance_rate <- time_pid_df$uema_completed_num/time_pid_df$uema_expected_num
+
+```
+
+
+Second, we do the same with burst EMA
+```{r}
+
+burst_keep_cols <- c("participant_ID", "burst_ema_completed_num", "burst_ema_original_prompted_num", "burst_ema_expected_num")
+
+selected_BURST_df <- burst_df[, burst_keep_cols]
+
+```
+
+Now create a function to return the completely aggregated df
+```{r}
+
+selected_BURST_df$burst_ema_completed_num <- as.numeric(selected_BURST_df$burst_ema_completed_num)
+selected_BURST_df$burst_ema_original_prompted_num <- as.numeric(selected_BURST_df$burst_ema_original_prompted_num)
+selected_BURST_df$burst_ema_expected_num <- as.numeric(selected_BURST_df$burst_ema_expected_num)
+
+aggregate_burst_df <- function(df){
+  
+  df1 <- df[, c("participant_ID", "burst_ema_completed_num", "burst_ema_original_prompted_num", "burst_ema_expected_num")]
+  num_burst_days_df <- df %>% count(participant_ID)
+  df2 <- aggregate(.~participant_ID, df1, sum)
+  df2$num_burst_days <- num_burst_days_df$n
+  return(df2)
+  
+}
+
+```
+
+Use the function to get the aggregate df
+
+```{r}
+
+burst_pid_df <- aggregate_burst_df(selected_BURST_df)
+
+```
+
+Add compliance and completion rate columns
+```{r}
+
+burst_pid_df$burst_completion_rate <- burst_pid_df$burst_ema_completed_num/burst_pid_df$burst_ema_original_prompted_num
+burst_pid_df$burst_compliance_rate <- burst_pid_df$burst_ema_completed_num/burst_pid_df$burst_ema_expected_num
+
+```
+
+## Combine burst and time pid df
+```{r}
+
+pid_burst_time_df <- join(time_pid_df, burst_pid_df)
+
+
+```
+
+## Get box plot distribution of compliance and validation percentages
+```{r}
+
+get_perc_box_plot <- function(df){
+  keep_cols <- c("participant_ID", "uema_completion_rate", "uema_compliance_rate", "burst_completion_rate", "burst_compliance_rate", "uema_validation_perc")
+  subset_df <- df[, keep_cols]
+  df_melt <- melt(subset_df, id.var="participant_ID")
+  box_comp_plot<- ggplot(data = df_melt, aes(x=variable, y=value)) + 
+  geom_boxplot() + 
+  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax= ..y.., ymin = ..y..),
+               width = 0.75, linetype="dashed") +
+  ylim(0, 1) +
+  ggtitle("uEMA and Burst EMA compliance, completion, and validation rate")
+  return(box_comp_plot)
+}
+
+```
+
+Get the plot
+```{r}
+
+uema_burst_boxplot <- get_perc_box_plot(pid_burst_time_df)
+
+```
+
+## Get a participant wise adjacent bar plot
+
+Get a plot to check participant wise burst ema compliance completion and other data side by side.
+Might be useful to see if there are commonalities
+
+
+```{r}
+
+get_adjacent_bar_plots <- function(df){
+  keep_cols <- c("uema_completion_rate", "uema_compliance_rate", "burst_completion_rate", "burst_compliance_rate", "uema_validation_perc")
+  df <- df[, keep_cols]
+  df$p_no <- c(1:nrow(df))
+  df$p_no <- as.character(df$p_no)
+  
+  df_melt <- melt(df, id.var = "p_no")
+  adj_plot <- ggplot(data = df_melt, aes(x = p_no, y = value, fill = variable)) +
+    geom_bar(stat = 'identity', position = 'dodge') +
+    ggtitle('response and validation rates by participants')
+  
+  return(adj_plot)
+  
+}
+
+```
+
+or create a facet plot
+```{r}
+
+get_facet_rate_plot <- function(df){
+  keep_cols <- c("uema_completion_rate", "uema_compliance_rate", "burst_completion_rate", "burst_compliance_rate", "uema_validation_perc")
+  df <- df[, keep_cols]
+  df$p_no <- c(1:nrow(df))
+  df$p_no <- as.character(df$p_no)
+  
+  df_melt <- melt(df, id.var = "p_no")
+  adj_plot <- ggplot(data = df_melt, aes(x = p_no, y = value)) +
+    geom_bar(stat = 'identity') +
+    ggtitle('response and validation rates by participants') +
+    facet_wrap(variable~., ncol = 1)
+}
+
+```
+
+
+Now, get the plot
+```{r}
+
+adj_plot <- get_facet_rate_plot(pid_burst_time_df)
+
+```
+
+Get a general correlation matrix for participant's response rates
+```{r}
+
+get_cor_matrix_plot <- function(df){
+  keep_cols <- c("uema_completion_rate", "uema_compliance_rate", "burst_completion_rate", "burst_compliance_rate", "uema_validation_perc")
+  df <- df[, keep_cols]
+  cor_mat <- cor(df)
+  
+  col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+  cor_plot <- corrplot(cor_mat, method="color", col=col(200),  
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+  
+  
+  
+  
+  # cor_plot <- corrplot(cor_mat, method = "number", type = "upper", order = "hclust")
+  return(cor_plot)
+}
+
+```
+
+Get corrplot
+```{r}
+
+cor_plot <- get_cor_matrix_plot(pid_burst_time_df)
+
+
+```
+
