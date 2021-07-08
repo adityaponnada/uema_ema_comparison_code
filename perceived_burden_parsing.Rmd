@@ -136,3 +136,33 @@ final_df <- rbind(exit_df, six_mon_df)
 
 ```
 
+
+## Reassign question names
+The goal here is to categorize questions into subscales for easy computation
+
+First read the question mapping file
+```{r}
+
+
+q_id_map_df <- read.csv(file="D:/uema_ema_comparison_CHI/perceived_burden/question_id_mapping.csv", sep=",", header=TRUE)
+
+current_qid_list <- q_id_map_df$Q_ID
+subscale_id_list <- q_id_map_df$Subscale_ID
+
+
+
+```
+
+
+Now add the first three columns to the subscale list
+```{r}
+
+subscale_id_list <- c(c("record_id", "visualizerid", "participant_status"), subscale_id_list)
+
+```
+
+Now replace the column names
+```{r}
+names(final_df) <- subscale_id_list
+```
+
