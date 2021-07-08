@@ -202,11 +202,17 @@ timesocial_burden = c("timesocial_1", "timesocial_2", "timesocial_3", "timesocia
 cognitive_burden = c("cognitive_1", "cognitive_2", "cognitive_3", "cognitive_4", "cognitive_5", "cognitive_6")
 interruption_burden = c("interrupt_1", "interrupt_2", "interrupt_3")
 
-difficult_burden <- c(paste0("phone_", difficult_burden), paste0("watch_", difficult_burden))
-physical_burden <- c(paste0("phone_", physical_burden), paste0("watch_", physical_burden))
-timesocial_burden <- c(paste0("phone_", timesocial_burden), paste0("watch_", timesocial_burden))
-cognitive_burden <- c(paste0("phone_", cognitive_burden), paste0("watch_", cognitive_burden))
-interruption_burden <- c(paste0("phone_", interruption_burden), paste0("watch_", interruption_burden))
+difficult_burden_watch <- paste0("watch_", difficult_burden)
+physical_burden_watch <- paste0("watch_", physical_burden)
+timesocial_burden_watch <- paste0("watch_", timesocial_burden)
+cognitive_burden_watch <- paste0("watch_", cognitive_burden)
+interruption_burden_watch <- paste0("watch_", interruption_burden)
+
+difficult_burden_phone <- paste0("phone_", difficult_burden)
+physical_burden_phone <- paste0("phone_", physical_burden)
+timesocial_burden_phone <- paste0("phone_", timesocial_burden)
+cognitive_burden_phone <- paste0("phone_", cognitive_burden)
+interruption_burden_phone <- paste0("phone_", interruption_burden)
 
 ```
 
@@ -215,13 +221,42 @@ compute subscale scores
 ```{r}
 
 
-final_burden_df$difficult_burden <- rowSums(final_burden_df[,difficult_burden], na.rm = TRUE)
-final_burden_df$physical_burden <- rowSums(final_burden_df[,physical_burden], na.rm = TRUE)
-final_burden_df$timesocial_burden <- rowSums(final_burden_df[,timesocial_burden], na.rm = TRUE)
-final_burden_df$cognitive_burden <- rowSums(final_burden_df[,cognitive_burden], na.rm = TRUE)
-final_burden_df$interruption_burden <- rowSums(final_burden_df[,interruption_burden], na.rm = TRUE)
+final_burden_df$difficult_burden_phone <- rowSums(final_burden_df[,difficult_burden_phone], na.rm = TRUE)
+final_burden_df$physical_burden_phone <- rowSums(final_burden_df[,physical_burden_phone], na.rm = TRUE)
+final_burden_df$timesocial_burden_phone <- rowSums(final_burden_df[,timesocial_burden_phone], na.rm = TRUE)
+final_burden_df$cognitive_burden_phone <- rowSums(final_burden_df[,cognitive_burden_phone], na.rm = TRUE)
+final_burden_df$interruption_burden_phone <- rowSums(final_burden_df[,interruption_burden_phone], na.rm = TRUE)
+
+final_burden_df$difficult_burden_watch <- rowSums(final_burden_df[,difficult_burden_watch], na.rm = TRUE)
+final_burden_df$physical_burden_watch <- rowSums(final_burden_df[,physical_burden_watch], na.rm = TRUE)
+final_burden_df$timesocial_burden_watch <- rowSums(final_burden_df[,timesocial_burden_watch], na.rm = TRUE)
+final_burden_df$cognitive_burden_watch <- rowSums(final_burden_df[,cognitive_burden_watch], na.rm = TRUE)
+final_burden_df$interruption_burden_watch <- rowSums(final_burden_df[,interruption_burden_watch], na.rm = TRUE)
 
 ```
 
 
+## Check general ranges
+```{r}
+
+describe(final_burden_df$total_phone_burden)
+describe(final_burden_df$total_watch_burden)
+
+describe(final_burden_df$difficult_burden_phone)
+describe(final_burden_df$difficult_burden_watch)
+
+describe(final_burden_df$physical_burden_phone)
+describe(final_burden_df$physical_burden_watch)
+
+describe(final_burden_df$timesocial_burden_phone)
+describe(final_burden_df$timesocial_burden_watch)
+
+describe(final_burden_df$cognitive_burden_phone)
+describe(final_burden_df$cognitive_burden_watch)
+
+describe(final_burden_df$interruption_burden_phone)
+describe(final_burden_df$interruption_burden_watch)
+
+
+```
 
