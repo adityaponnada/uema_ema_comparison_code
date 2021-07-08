@@ -179,6 +179,15 @@ for (p_id in p_ids){
 
 ```
 
+## Convert prompt counts to numeric
+```{r}
+
+time_df$uema_prompted_num <- as.numeric(time_df$uema_prompted_num)
+time_df$uema_completed_num <- as.numeric(time_df$uema_completed_num)
+
+
+```
+
 
 ## Use sleep time reported to get the expected number of uEMA and burst EMA prompts
 
@@ -219,6 +228,14 @@ burst_df$burst_ema_compliance_rate <- as.numeric(burst_df$burst_ema_compliance_r
 
 time_df$uema_completion_rate <- as.numeric(time_df$uema_completion_rate)
 time_df$uema_compliance_rate <- as.numeric(time_df$uema_compliance_rate)
+
+
+time_df$uema_validation_perc <- as.numeric(time_df$uema_validation_perc)
+
+time_df$uema_undo_num <- as.numeric(time_df$uema_undo_num)
+
+time_df$uema_resp_time_mean <- as.numeric(time_df$uema_resp_time_mean)
+
 ```
 
 if there are dates to be filtered because of technical malfunction, include that code here
@@ -265,11 +282,12 @@ mean_val = mean(burst_df$burst_ema_completion_rate)
 median_val = median(burst_df$burst_ema_completion_rate)
 
 burst_completion_plot <- ggplot(burst_df, aes(x=burst_ema_completion_rate)) + 
-  geom_histogram(binwidth = 0.05) +
+  geom_histogram(binwidth = 0.10) +
   geom_vline(aes(xintercept = mean(burst_ema_completion_rate)), data=burst_df, linetype=5, color = "red") +
   geom_vline(aes(xintercept = median(burst_ema_completion_rate)), data=burst_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
-  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=2000), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=2000), colour="black", angle=90, text=element_text(size=10)) +
+  ylim(0, 3000) +
   ggtitle("Burst EMA Completion Rate per BURST day")
 
 
@@ -283,12 +301,13 @@ describe(burst_df$burst_ema_compliance_rate)
 mean_val = mean(burst_df$burst_ema_compliance_rate, na.rm = TRUE)
 median_val = median(burst_df$burst_ema_compliance_rate, na.rm = TRUE)
 
-bust_compliance_plot <- ggplot(burst_df, aes(x=burst_ema_compliance_rate)) + 
-  geom_histogram(binwidth = 0.05) +
+burst_compliance_plot <- ggplot(burst_df, aes(x=burst_ema_compliance_rate)) + 
+  geom_histogram(binwidth = 0.10) +
   geom_vline(aes(xintercept = mean(burst_ema_compliance_rate, na.rm = TRUE)), data=burst_df, linetype=5, color = "red") +
   geom_vline(aes(xintercept = median(burst_ema_compliance_rate, na.rm = TRUE)), data=burst_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
-  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=2000), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=2000), colour="black", angle=90, text=element_text(size=10)) +
+  ylim(0, 3000) +
   ggtitle("Burst EMA Compliance Rate per BURST day")
 
 
@@ -306,8 +325,9 @@ uema_completion_plot <- ggplot(time_df, aes(x=uema_completion_rate)) +
   geom_histogram(binwidth = 0.05) +
   geom_vline(aes(xintercept = mean(uema_completion_rate)), data=time_df, linetype=5, color = "red") +
   geom_vline(aes(xintercept = median(uema_completion_rate)), data=time_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
-  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=2000), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=2000), colour="black", angle=90, text=element_text(size=10)) +
+  ylim(0, 3000) +
   ggtitle("uEMA Completion Rate per TIME day")
 
 ```
@@ -323,8 +343,9 @@ uema_compliance_plot <- ggplot(time_df, aes(x=uema_compliance_rate)) +
   geom_histogram(binwidth = 0.05) +
   geom_vline(aes(xintercept = mean(uema_compliance_rate, na.rm = TRUE)), data=time_df, linetype=5, color = "red") +
   geom_vline(aes(xintercept = median(uema_compliance_rate, na.rm = TRUE)), data=time_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
-  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=700), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=mean_val, label=paste0("\nmean = ", format(round(mean_val, 2), nsmall = 2)), y=2000), colour="black", angle=90, text=element_text(size=10)) +
+  geom_text(aes(x=median_val, label=paste0("\nmed = ", format(round(median_val, 2), nsmall = 2)), y=2000), colour="black", angle=90, text=element_text(size=10)) +
+  ylim(0, 3000) +
   ggtitle("uEMA Compliance Rate per TIME day")
 
 
@@ -353,6 +374,17 @@ uema_validation_plot <- ggplot(time_df, aes(x=uema_validation_perc)) +
 
 
 ```
+
+
+## Outlier vs non-outlier comparison
+Remove outlier and compare the percentages with and without the outlier
+```{r}
+
+time_sans_outlier_df <- subset(time_df, time_df$participant_ID != "uniformlyharmfulbush@timestudy_com")
+
+
+```
+
 
 ## Create participant level data frames
 This data frame is to get a wide form for each participant
@@ -565,6 +597,16 @@ cor_plot <- get_cor_matrix_plot(pid_burst_time_df)
 
 
 ```
+
+## Remove the outlier participant(s)
+Compare the outlier vs not outlier comliance and completion rates
+```{r}
+
+pid_burst_time_sans_outlier_df <- subset(pid_burst_time_df, pid_burst_time_df$participant_ID != "uniformlyharmfulbush@timestudy_com")
+
+
+```
+
 
 ## Get the long format day wise completed, prompted, and answered prompts
 ```{r}
