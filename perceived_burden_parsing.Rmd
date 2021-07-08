@@ -1,0 +1,138 @@
+---
+title: "perceived_burden_parsing"
+author: "Aditya Ponnada"
+date: "7/7/2021"
+output: html_document
+---
+
+## import libraries
+```{r}
+
+library(ggplot2)
+library(psych)
+library(reshape2)
+library(dplyr)
+
+
+```
+
+## Read in the burden file
+```{r}
+
+
+perceived_burden_data <- read.csv(file = "D:/uema_ema_comparison_CHI/perceived_burden/TIMEMAIN-AdityaBurden_DATA_2021-07-07_1126.csv", sep = ",", header = TRUE)
+
+```
+
+
+## Split into 6m and exit survey dfs
+
+First, get the column names and then split column names into two
+```{r}
+
+all_col_names <- names(perceived_burden_data)
+
+```
+
+Get column names for 6 months survey
+```{r}
+
+common_cols <- c(1:3)
+six_mon_cols <- c(4:52)
+exit_cols <- c(53:112)
+
+id_df <-perceived_burden_data[, common_cols]
+six_mon_df <- perceived_burden_data[, six_mon_cols]
+exit_df <- perceived_burden_data[, exit_cols]
+
+
+```
+
+Stitch the id columns to other dataframes
+```{r}
+
+six_mon_df <- cbind(id_df, six_mon_df)
+exit_df <- cbind(id_df, exit_df)
+
+
+```
+
+keep only perceived burden scale related columns
+```{r}
+
+remove_six_mon_cols <- c(c(25:27), c(49:52))
+remove_exit_cols <- c(c(25:33), c(55:63))
+
+
+```
+
+Remove these column names from the dataframes
+```{r}
+
+six_mon_df <- six_mon_df %>% select(-remove_six_mon_cols)
+
+exit_df <- exit_df %>% select(-remove_exit_cols)
+
+```
+
+## Remove non exit survey users
+
+Remove users who have not completed the exit survey
+This is because either they are still active or they just did not fill it
+
+```{r}
+
+exit_df <- exit_df[!apply(is.na(exit_df[,4:45]), 1, all),]
+
+```
+
+Do the same for six months dataframe
+```{r}
+
+six_mon_df <- six_mon_df[!apply(is.na(six_mon_df[,4:45]), 1, all),]
+
+```
+
+## Rename columns in exit to match with 6 months
+```{r}
+
+exit_cols <- names(exit_df)
+
+new_exit_cols <- c()
+
+for (col_name in exit_cols){
+  
+  
+  if (grepl( "engagement", col_name, fixed = TRUE)) {
+    col_name <- gsub("_exit", "", col_name)
+  }
+  
+  new_exit_cols <- c(new_exit_cols, col_name)
+  
+}
+
+```
+
+## Create a final unified data frame
+Here, we use the latest responses by the participants. Thus we combine the exit df with six months df
+But, we want to remove those users from six months df who have already completed the exit df
+
+```{r}
+
+`%!in%` <- Negate(`%in%`)
+
+exit_users <- unique(exit_df$visualizerid)
+
+names(exit_df) <- new_exit_cols
+
+six_mon_df <- subset(six_mon_df, six_mon_df$visualizerid %!in% exit_users)
+
+```
+
+Now stitch them together
+```{r}
+
+final_df <- rbind(exit_df, six_mon_df)
+
+```
+
