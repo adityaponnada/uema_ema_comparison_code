@@ -236,6 +236,30 @@ final_burden_df$interruption_burden_watch <- rowSums(final_burden_df[,interrupti
 ```
 
 
+## Filter out unneccessary participants
+```{r}
+
+final_user_df <- read.csv(file="D:/uema_ema_comparison_CHI/perceived_burden/final_user_list.csv", sep = ",", header = TRUE)
+
+```
+
+Keep only the users present in final user list
+```{r}
+
+final_user_list <- unique(final_user_df$x)
+
+final_burden_df <- subset(final_burden_df, final_burden_df$visualizerid %in% final_user_list)
+
+```
+
+## Remove the row with watch burden 0
+```{r}
+
+final_burden_df <- subset(final_burden_df, final_burden_df$total_watch_burden != 0)
+
+```
+
+
 ## Check general ranges
 ```{r}
 
@@ -260,3 +284,230 @@ describe(final_burden_df$interruption_burden_watch)
 
 ```
 
+## Plot distributions
+plot overall burden distribution - phone
+```{r}
+
+
+mean_burden = mean(final_burden_df$total_phone_burden)
+median_burden = median(final_burden_df$total_phone_burden)
+
+phone_burden_plot <- ggplot(final_burden_df, aes(x=total_phone_burden)) + 
+  geom_histogram() +
+  ggtitle("Total burden EMA") +
+  geom_vline(aes(xintercept = mean(total_phone_burden)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(total_phone_burden)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 10) +
+  xlim(19,95)
+
+
+```
+
+plot overall burden distribution - watch
+```{r}
+
+
+mean_burden = mean(final_burden_df$total_watch_burden)
+median_burden = median(final_burden_df$total_watch_burden)
+
+watch_burden_plot <- ggplot(final_burden_df, aes(x=total_watch_burden)) + 
+  geom_histogram() +
+  ggtitle("Total burden uEMA") +
+  geom_vline(aes(xintercept = mean(total_watch_burden)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(total_watch_burden)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 10) +
+  xlim(19,95)
+
+
+```
+
+
+phone difficult burden
+```{r}
+
+
+mean_burden = mean(final_burden_df$difficult_burden_phone)
+median_burden = median(final_burden_df$difficult_burden_phone)
+
+phone_difficult_burden_plot <- ggplot(final_burden_df, aes(x=difficult_burden_phone)) + 
+  geom_histogram() +
+  ggtitle("Difficulty burden EMA") +
+  geom_vline(aes(xintercept = mean(difficult_burden_phone)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(difficult_burden_phone)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 20) +
+  xlim(4,20)
+
+
+```
+
+
+watch difficult burden
+```{r}
+
+
+mean_burden = mean(final_burden_df$difficult_burden_watch)
+median_burden = median(final_burden_df$difficult_burden_watch)
+
+watch_difficult_burden_plot <- ggplot(final_burden_df, aes(x=difficult_burden_watch)) + 
+  geom_histogram() +
+  ggtitle("Difficulty burden uEMA") +
+  geom_vline(aes(xintercept = mean(difficult_burden_watch)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(difficult_burden_watch)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 20) +
+  xlim(4,20)
+
+
+```
+
+phone physical burden
+```{r}
+mean_burden = mean(final_burden_df$physical_burden_phone)
+median_burden = median(final_burden_df$physical_burden_phone)
+
+phone_physical_burden_plot <- ggplot(final_burden_df, aes(x=physical_burden_phone)) + 
+  geom_histogram() +
+  ggtitle("Physical burden EMA") +
+  geom_vline(aes(xintercept = mean(physical_burden_phone)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(physical_burden_phone)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 20) +
+  xlim(2,10)
+
+
+```
+
+watch physical burden
+```{r}
+mean_burden = mean(final_burden_df$physical_burden_watch)
+median_burden = median(final_burden_df$physical_burden_watch)
+
+watch_physical_burden_plot <- ggplot(final_burden_df, aes(x=physical_burden_watch)) + 
+  geom_histogram() +
+  ggtitle("Physical burden uEMA") +
+  geom_vline(aes(xintercept = mean(physical_burden_watch)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(physical_burden_watch)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 20) +
+  xlim(2,10)
+
+
+```
+
+phone time social burden
+```{r}
+mean_burden = mean(final_burden_df$timesocial_burden_phone)
+median_burden = median(final_burden_df$timesocial_burden_phone)
+
+phone_timesocial_burden_plot <- ggplot(final_burden_df, aes(x=timesocial_burden_phone)) + 
+  geom_histogram() +
+  ggtitle("Time/Social burden EMA") +
+  geom_vline(aes(xintercept = mean(timesocial_burden_phone)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(timesocial_burden_phone)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 20) +
+  xlim(4,20)
+
+
+```
+
+watch time social burden
+```{r}
+mean_burden = mean(final_burden_df$timesocial_burden_watch)
+median_burden = median(final_burden_df$timesocial_burden_watch)
+
+watch_timesocial_burden_plot <- ggplot(final_burden_df, aes(x=timesocial_burden_watch)) + 
+  geom_histogram() +
+  ggtitle("Time/Social burden uEMA") +
+  geom_vline(aes(xintercept = mean(timesocial_burden_watch)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(timesocial_burden_watch)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 20) +
+  xlim(4,20)
+
+
+```
+
+
+phone cognitive burden
+```{r}
+mean_burden = mean(final_burden_df$cognitive_burden_phone)
+median_burden = median(final_burden_df$cognitive_burden_phone)
+
+phone_cognitive_burden_plot <- ggplot(final_burden_df, aes(x=cognitive_burden_phone)) + 
+  geom_histogram() +
+  ggtitle("Cognitive burden EMA") +
+  geom_vline(aes(xintercept = mean(cognitive_burden_phone)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(cognitive_burden_phone)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 15) +
+  xlim(6,30)
+
+
+```
+
+watch cognitive burden
+```{r}
+mean_burden = mean(final_burden_df$cognitive_burden_watch)
+median_burden = median(final_burden_df$cognitive_burden_watch)
+
+watch_cognitive_burden_plot <- ggplot(final_burden_df, aes(x=cognitive_burden_watch)) + 
+  geom_histogram() +
+  ggtitle("Cognitive burden uEMA") +
+  geom_vline(aes(xintercept = mean(cognitive_burden_watch)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(cognitive_burden_watch)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 15) +
+  xlim(6,30)
+
+
+```
+
+phone interruption burden
+```{r}
+mean_burden = mean(final_burden_df$interruption_burden_phone)
+median_burden = median(final_burden_df$interruption_burden_phone)
+
+phone_interrupt_burden_plot <- ggplot(final_burden_df, aes(x=interruption_burden_phone)) + 
+  geom_histogram() +
+  ggtitle("Interruption burden EMA") +
+  geom_vline(aes(xintercept = mean(interruption_burden_phone)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(interruption_burden_phone)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 15) +
+  xlim(3,15)
+
+
+```
+
+watch interruption burden
+```{r}
+mean_burden = mean(final_burden_df$interruption_burden_watch)
+median_burden = median(final_burden_df$interruption_burden_watch)
+
+watch_interrupt_burden_plot <- ggplot(final_burden_df, aes(x=interruption_burden_watch)) + 
+  geom_histogram() +
+  ggtitle("Interruption burden uEMA") +
+  geom_vline(aes(xintercept = mean(interruption_burden_watch)), data=final_burden_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(interruption_burden_watch)), data=final_burden_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 15) +
+  xlim(3,15)
+
+
+```
