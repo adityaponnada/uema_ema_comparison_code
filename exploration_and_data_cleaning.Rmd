@@ -657,3 +657,14 @@ clean_time_burst_df$completed <- clean_time_burst_df$uema_completed_num + clean_
 
 ```
 
+Write the user list to a file
+```{r}
+
+final_user_list <- unique(clean_time_burst_df$participant_ID)
+
+final_user_list <- gsub("@timestudy_com", "", final_user_list)
+
+write.csv(file = "D:/uema_ema_comparison_CHI/perceived_burden/final_user_list.csv", final_user_list, sep = ",", row.names = FALSE, quote = FALSE)
+
+```
+
