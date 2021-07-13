@@ -111,39 +111,13 @@ for (col_name in exit_cols){
   
 }
 
-```
-
-## Create a final unified data frame
-Here, we use the latest responses by the participants. Thus we combine the exit df with six months df
-But, we want to remove those users from six months df who have already completed the exit df
-
-```{r}
-
-`%!in%` <- Negate(`%in%`)
-
-exit_users <- unique(exit_df$visualizerid)
-
 names(exit_df) <- new_exit_cols
 
-six_mon_df <- subset(six_mon_df, six_mon_df$visualizerid %!in% exit_users)
-
 ```
 
-Now stitch them together
+## Rename column names for the dataframes
+First read the mapping file
 ```{r}
-
-final_df <- rbind(exit_df, six_mon_df)
-
-```
-
-
-## Reassign question names
-The goal here is to categorize questions into subscales for easy computation
-
-First read the question mapping file
-```{r}
-
-
 q_id_map_df <- read.csv(file="D:/uema_ema_comparison_CHI/perceived_burden/question_id_mapping.csv", sep=",", header=TRUE)
 
 q_id_map_df$device_subscale_id <- paste0(q_id_map_df$Device, "_", q_id_map_df$Subscale_ID)
@@ -153,153 +127,154 @@ subscale_id_list <- q_id_map_df$device_subscale_id
 
 
 
+
 ```
 
-
-Now add the first three columns to the subscale list
+Rename columnn names for the six months and exit survey
 ```{r}
 
-subscale_id_list <- c(c("record_id", "visualizerid", "participant_status"), subscale_id_list)
+subscale_id_list <- c("record_id", "visualizerid", "participant_status", c(subscale_id_list))
+
+names(six_mon_df) <- subscale_id_list
+names(exit_df) <- subscale_id_list
+
 
 ```
 
-Now replace the column names
-```{r}
-names(final_df) <- subscale_id_list
-```
-
-
-## get burden scores
-
-First get the total score. For that we create a new df excluding the fun and rewarding questions
-
+## Add total and subscale scores
+first, create a common function
 ```{r}
 
-exclude_columns <- c("phone_cognitive_7", "phone_cognitive_8", "watch_cognitive_7", "watch_cognitive_8")
-
-final_burden_df <- dplyr::select(final_df, -exclude_columns)
-
+compute_total_burden <- function(df){
+  phone_burden_col = names(df)[c(c(4:20), c(23, 24))]
+  watch_burden_col = names(df)[c(c(25:41), c(44, 45))]
+  df$total_phone_burden <- rowSums(df[,phone_burden_col], na.rm = TRUE)
+  df$total_watch_burden <- rowSums(df[,watch_burden_col], na.rm = TRUE)
+  
+  return(df)
+  
+}
 
 ```
 
-add total score
+Then assign new columns to exit and six month surveys
 ```{r}
 
-all_burden_cols=names(final_burden_df)[4:41]
-phone_burden_col = names(final_burden_df)[4:22]
-watch_burden_col = names(final_burden_df)[23:41]
-final_burden_df$total_phone_burden <- rowSums(final_burden_df[,phone_burden_col], na.rm = TRUE)
-final_burden_df$total_watch_burden <- rowSums(final_burden_df[,watch_burden_col], na.rm = TRUE)
+exit_df <- compute_total_burden(exit_df)
+six_mon_df <- compute_total_burden(six_mon_df)
+
 
 ```
 
-add subscale scores
+## Now add inidividual burden subscale scores
 ```{r}
 
-difficult_burden = c("difficult_1", "difficult_2", "difficult_3", "difficult_4")
-physical_burden = c("physical_1", "physical_2")
-timesocial_burden = c("timesocial_1", "timesocial_2", "timesocial_3", "timesocial_4")
-cognitive_burden = c("cognitive_1", "cognitive_2", "cognitive_3", "cognitive_4", "cognitive_5", "cognitive_6")
-interruption_burden = c("interrupt_1", "interrupt_2", "interrupt_3")
-
-difficult_burden_watch <- paste0("watch_", difficult_burden)
-physical_burden_watch <- paste0("watch_", physical_burden)
-timesocial_burden_watch <- paste0("watch_", timesocial_burden)
-cognitive_burden_watch <- paste0("watch_", cognitive_burden)
-interruption_burden_watch <- paste0("watch_", interruption_burden)
-
-difficult_burden_phone <- paste0("phone_", difficult_burden)
-physical_burden_phone <- paste0("phone_", physical_burden)
-timesocial_burden_phone <- paste0("phone_", timesocial_burden)
-cognitive_burden_phone <- paste0("phone_", cognitive_burden)
-interruption_burden_phone <- paste0("phone_", interruption_burden)
+add_subscale_burden <- function(df){
+ 
+  
+  difficult_burden = c("difficult_1", "difficult_2", "difficult_3", "difficult_4")
+  physical_burden = c("physical_1", "physical_2")
+  timesocial_burden = c("timesocial_1", "timesocial_2", "timesocial_3", "timesocial_4")
+  cognitive_burden = c("cognitive_1", "cognitive_2", "cognitive_3", "cognitive_4", "cognitive_5", "cognitive_6")
+  interruption_burden = c("interrupt_1", "interrupt_2", "interrupt_3")
+  engagement = c("engagement_1", "engagement_2")
+  
+  difficult_burden_watch <- paste0("watch_", difficult_burden)
+  physical_burden_watch <- paste0("watch_", physical_burden)
+  timesocial_burden_watch <- paste0("watch_", timesocial_burden)
+  cognitive_burden_watch <- paste0("watch_", cognitive_burden)
+  interruption_burden_watch <- paste0("watch_", interruption_burden)
+  engagement_watch <- paste0("watch_", engagement)
+  
+  difficult_burden_phone <- paste0("phone_", difficult_burden)
+  physical_burden_phone <- paste0("phone_", physical_burden)
+  timesocial_burden_phone <- paste0("phone_", timesocial_burden)
+  cognitive_burden_phone <- paste0("phone_", cognitive_burden)
+  interruption_burden_phone <- paste0("phone_", interruption_burden)
+  engagement_phone <- paste0("phone_", engagement)
+  
+  df$difficult_burden_phone <- rowSums(df[,difficult_burden_phone], na.rm = TRUE)
+  df$physical_burden_phone <- rowSums(df[,physical_burden_phone], na.rm = TRUE)
+  df$timesocial_burden_phone <- rowSums(df[,timesocial_burden_phone], na.rm = TRUE)
+  df$cognitive_burden_phone <- rowSums(df[,cognitive_burden_phone], na.rm = TRUE)
+  df$interruption_burden_phone <- rowSums(df[,interruption_burden_phone], na.rm = TRUE)
+  df$engagement_phone <- rowSums(df[,engagement_phone], na.rm = TRUE)
+  
+  df$difficult_burden_watch <- rowSums(df[,difficult_burden_watch], na.rm = TRUE)
+  df$physical_burden_watch <- rowSums(df[,physical_burden_watch], na.rm = TRUE)
+  df$timesocial_burden_watch <- rowSums(df[,timesocial_burden_watch], na.rm = TRUE)
+  df$cognitive_burden_watch <- rowSums(df[,cognitive_burden_watch], na.rm = TRUE)
+  df$interruption_burden_watch <- rowSums(df[,interruption_burden_watch], na.rm = TRUE)
+  df$engagement_watch <- rowSums(df[,engagement_watch], na.rm = TRUE)
+  
+  return(df)
+  
+  
+   
+}
 
 ```
 
-
-compute subscale scores
+Now apply this function to the exit and 6m df
 ```{r}
 
-
-final_burden_df$difficult_burden_phone <- rowSums(final_burden_df[,difficult_burden_phone], na.rm = TRUE)
-final_burden_df$physical_burden_phone <- rowSums(final_burden_df[,physical_burden_phone], na.rm = TRUE)
-final_burden_df$timesocial_burden_phone <- rowSums(final_burden_df[,timesocial_burden_phone], na.rm = TRUE)
-final_burden_df$cognitive_burden_phone <- rowSums(final_burden_df[,cognitive_burden_phone], na.rm = TRUE)
-final_burden_df$interruption_burden_phone <- rowSums(final_burden_df[,interruption_burden_phone], na.rm = TRUE)
-
-final_burden_df$difficult_burden_watch <- rowSums(final_burden_df[,difficult_burden_watch], na.rm = TRUE)
-final_burden_df$physical_burden_watch <- rowSums(final_burden_df[,physical_burden_watch], na.rm = TRUE)
-final_burden_df$timesocial_burden_watch <- rowSums(final_burden_df[,timesocial_burden_watch], na.rm = TRUE)
-final_burden_df$cognitive_burden_watch <- rowSums(final_burden_df[,cognitive_burden_watch], na.rm = TRUE)
-final_burden_df$interruption_burden_watch <- rowSums(final_burden_df[,interruption_burden_watch], na.rm = TRUE)
+exit_df <- add_subscale_burden(exit_df)
+six_mon_df <- add_subscale_burden(six_mon_df)
 
 ```
 
 
-## Filter out unneccessary participants
+## Describe burden and engagement variables
 ```{r}
 
-final_user_df <- read.csv(file="D:/uema_ema_comparison_CHI/perceived_burden/final_user_list.csv", sep = ",", header = TRUE)
+# Remove temporarily
+# six_mon_df <- subset(six_mon_df, six_mon_df$total_watch_burden != 0)
 
 ```
 
-Keep only the users present in final user list
+List descriptives here for six months df
 ```{r}
 
-final_user_list <- unique(final_user_df$x)
+describe(six_mon_df$total_phone_burden)
+describe(six_mon_df$total_watch_burden)
 
-final_burden_df <- subset(final_burden_df, final_burden_df$visualizerid %in% final_user_list)
+describe(six_mon_df$difficult_burden_phone)
+describe(six_mon_df$difficult_burden_watch)
 
-```
+describe(six_mon_df$timesocial_burden_phone)
+describe(six_mon_df$timesocial_burden_watch)
 
-## Remove the row with watch burden 0
-```{r}
+describe(six_mon_df$physical_burden_phone)
+describe(six_mon_df$physical_burden_watch)
 
-final_burden_df <- subset(final_burden_df, final_burden_df$total_watch_burden != 0)
+describe(six_mon_df$cognitive_burden_phone)
+describe(six_mon_df$cognitive_burden_watch)
 
-```
+describe(six_mon_df$interruption_burden_phone)
+describe(six_mon_df$interruption_burden_watch)
 
-
-## Check general ranges
-```{r}
-
-describe(final_burden_df$total_phone_burden)
-describe(final_burden_df$total_watch_burden)
-
-describe(final_burden_df$difficult_burden_phone)
-describe(final_burden_df$difficult_burden_watch)
-
-describe(final_burden_df$physical_burden_phone)
-describe(final_burden_df$physical_burden_watch)
-
-describe(final_burden_df$timesocial_burden_phone)
-describe(final_burden_df$timesocial_burden_watch)
-
-describe(final_burden_df$cognitive_burden_phone)
-describe(final_burden_df$cognitive_burden_watch)
-
-describe(final_burden_df$interruption_burden_phone)
-describe(final_burden_df$interruption_burden_watch)
+describe(six_mon_df$engagement_phone)
+describe(six_mon_df$engagement_watch)
 
 
 ```
 
-## Plot distributions
+## Plot distributions for six months data
 plot overall burden distribution - phone
 ```{r}
 
 
-mean_burden = mean(final_burden_df$total_phone_burden)
-median_burden = median(final_burden_df$total_phone_burden)
+mean_burden = mean(six_mon_df$total_phone_burden)
+median_burden = median(six_mon_df$total_phone_burden)
 
-phone_burden_plot <- ggplot(final_burden_df, aes(x=total_phone_burden)) + 
+phone_burden_plot <- ggplot(six_mon_df, aes(x=total_phone_burden)) + 
   geom_histogram() +
   ggtitle("Total burden EMA") +
-  geom_vline(aes(xintercept = mean(total_phone_burden)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(total_phone_burden)), data=final_burden_df, linetype=5, color = "green") +
+  geom_vline(aes(xintercept = mean(total_phone_burden)), data=six_mon_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(total_phone_burden)), data=six_mon_df, linetype=5, color = "green") +
   geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
   geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
-  ylim(0, 10) +
+  ylim(0, 15) +
   xlim(19,95)
 
 
@@ -309,205 +284,228 @@ plot overall burden distribution - watch
 ```{r}
 
 
-mean_burden = mean(final_burden_df$total_watch_burden)
-median_burden = median(final_burden_df$total_watch_burden)
+mean_burden = mean(six_mon_df$total_watch_burden)
+median_burden = median(six_mon_df$total_watch_burden)
 
-watch_burden_plot <- ggplot(final_burden_df, aes(x=total_watch_burden)) + 
+watch_burden_plot <- ggplot(six_mon_df, aes(x=total_watch_burden)) + 
   geom_histogram() +
   ggtitle("Total burden uEMA") +
-  geom_vline(aes(xintercept = mean(total_watch_burden)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(total_watch_burden)), data=final_burden_df, linetype=5, color = "green") +
+  geom_vline(aes(xintercept = mean(total_watch_burden)), data=six_mon_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(total_watch_burden)), data=six_mon_df, linetype=5, color = "green") +
   geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
   geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
-  ylim(0, 10) +
+  ylim(0, 15) +
   xlim(19,95)
 
 
 ```
 
 
-phone difficult burden
+## Plot engagement plot for watch and phone
+
+For phone
 ```{r}
 
+mean_engagement = mean(six_mon_df$engagement_phone)
+median_engagement = median(six_mon_df$engagement_phone)
 
-mean_burden = mean(final_burden_df$difficult_burden_phone)
-median_burden = median(final_burden_df$difficult_burden_phone)
-
-phone_difficult_burden_plot <- ggplot(final_burden_df, aes(x=difficult_burden_phone)) + 
+phone_engagement_plot <- ggplot(six_mon_df, aes(x=engagement_phone)) + 
   geom_histogram() +
-  ggtitle("Difficulty burden EMA") +
-  geom_vline(aes(xintercept = mean(difficult_burden_phone)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(difficult_burden_phone)), data=final_burden_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
-  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ggtitle("Engagement EMA") +
+  geom_vline(aes(xintercept = mean(engagement_phone)), data=six_mon_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(engagement_phone)), data=six_mon_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_engagement, label=paste0("\nmean = ", format(round(mean_engagement, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_engagement, label=paste0("\nmed = ", format(round(median_engagement, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
   ylim(0, 20) +
-  xlim(4,20)
+  xlim(2,12)
+
+
 
 
 ```
 
-
-watch difficult burden
+For watch
 ```{r}
 
+mean_engagement = mean(six_mon_df$engagement_watch)
+median_engagement = median(six_mon_df$engagement_watch)
 
-mean_burden = mean(final_burden_df$difficult_burden_watch)
-median_burden = median(final_burden_df$difficult_burden_watch)
-
-watch_difficult_burden_plot <- ggplot(final_burden_df, aes(x=difficult_burden_watch)) + 
+watch_engagement_plot <- ggplot(six_mon_df, aes(x=engagement_watch)) + 
   geom_histogram() +
-  ggtitle("Difficulty burden uEMA") +
-  geom_vline(aes(xintercept = mean(difficult_burden_watch)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(difficult_burden_watch)), data=final_burden_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
-  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  ggtitle("Engagement EMA") +
+  geom_vline(aes(xintercept = mean(engagement_watch)), data=six_mon_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(engagement_watch)), data=six_mon_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_engagement, label=paste0("\nmean = ", format(round(mean_engagement, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_engagement, label=paste0("\nmed = ", format(round(median_engagement, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
   ylim(0, 20) +
-  xlim(4,20)
+  xlim(2,12)
+
+
 
 
 ```
 
-phone physical burden
+
+List descriptives here for exit df
 ```{r}
-mean_burden = mean(final_burden_df$physical_burden_phone)
-median_burden = median(final_burden_df$physical_burden_phone)
 
-phone_physical_burden_plot <- ggplot(final_burden_df, aes(x=physical_burden_phone)) + 
-  geom_histogram() +
-  ggtitle("Physical burden EMA") +
-  geom_vline(aes(xintercept = mean(physical_burden_phone)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(physical_burden_phone)), data=final_burden_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
-  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
-  ylim(0, 20) +
-  xlim(2,10)
+describe(exit_df$total_phone_burden)
+describe(exit_df$total_watch_burden)
+
+describe(exit_df$difficult_burden_phone)
+describe(exit_df$difficult_burden_watch)
+
+describe(exit_df$timesocial_burden_phone)
+describe(exit_df$timesocial_burden_watch)
+
+describe(exit_df$physical_burden_phone)
+describe(exit_df$physical_burden_watch)
+
+describe(exit_df$cognitive_burden_phone)
+describe(exit_df$cognitive_burden_watch)
+
+describe(exit_df$interruption_burden_phone)
+describe(exit_df$interruption_burden_watch)
+
+describe(exit_df$engagement_phone)
+describe(exit_df$engagement_watch)
 
 
 ```
 
-watch physical burden
+## Plot burden distributions for exit df
+For phone
 ```{r}
-mean_burden = mean(final_burden_df$physical_burden_watch)
-median_burden = median(final_burden_df$physical_burden_watch)
 
-watch_physical_burden_plot <- ggplot(final_burden_df, aes(x=physical_burden_watch)) + 
+
+mean_exit_burden = mean(exit_df$total_phone_burden)
+median_exit_burden = median(exit_df$total_phone_burden)
+
+phone_exit_burden_plot <- ggplot(exit_df, aes(x=total_phone_burden)) + 
   geom_histogram() +
-  ggtitle("Physical burden uEMA") +
-  geom_vline(aes(xintercept = mean(physical_burden_watch)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(physical_burden_watch)), data=final_burden_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
-  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
-  ylim(0, 20) +
-  xlim(2,10)
+  ggtitle("Total burden EMA | Exit") +
+  geom_vline(aes(xintercept = mean(total_phone_burden)), data=exit_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(total_phone_burden)), data=exit_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_exit_burden, label=paste0("\nmean = ", format(round(mean_exit_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_exit_burden, label=paste0("\nmed = ", format(round(median_exit_burden, 2), nsmall = 2)), y=2), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 5) +
+  xlim(19,95)
+
 
 
 ```
 
-phone time social burden
+For watch
 ```{r}
-mean_burden = mean(final_burden_df$timesocial_burden_phone)
-median_burden = median(final_burden_df$timesocial_burden_phone)
 
-phone_timesocial_burden_plot <- ggplot(final_burden_df, aes(x=timesocial_burden_phone)) + 
+
+mean_exit_burden = mean(exit_df$total_watch_burden)
+median_exit_burden = median(exit_df$total_watch_burden)
+
+watch_exit_burden_plot <- ggplot(exit_df, aes(x=total_watch_burden)) + 
   geom_histogram() +
-  ggtitle("Time/Social burden EMA") +
-  geom_vline(aes(xintercept = mean(timesocial_burden_phone)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(timesocial_burden_phone)), data=final_burden_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
-  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
-  ylim(0, 20) +
-  xlim(4,20)
+  ggtitle("Total burden uEMA | Exit") +
+  geom_vline(aes(xintercept = mean(total_watch_burden)), data=exit_df, linetype=5, color = "red") +
+  geom_vline(aes(xintercept = median(total_watch_burden)), data=exit_df, linetype=5, color = "green") +
+  geom_text(aes(x=mean_exit_burden, label=paste0("\nmean = ", format(round(mean_exit_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
+  geom_text(aes(x=median_exit_burden, label=paste0("\nmed = ", format(round(median_exit_burden, 2), nsmall = 2)), y=2), colour="black", angle=90, text=element_text(size=20)) +
+  ylim(0, 5) +
+  xlim(19,95)
+
 
 
 ```
 
-watch time social burden
+## Combine the Exit and 6months for common participants
 ```{r}
-mean_burden = mean(final_burden_df$timesocial_burden_watch)
-median_burden = median(final_burden_df$timesocial_burden_watch)
 
-watch_timesocial_burden_plot <- ggplot(final_burden_df, aes(x=timesocial_burden_watch)) + 
-  geom_histogram() +
-  ggtitle("Time/Social burden uEMA") +
-  geom_vline(aes(xintercept = mean(timesocial_burden_watch)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(timesocial_burden_watch)), data=final_burden_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
-  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
-  ylim(0, 20) +
-  xlim(4,20)
+exit_users <- unique(exit_df$visualizerid)
 
+six_mon_exit_df <- subset(six_mon_df, six_mon_df$visualizerid %in% exit_users)
+
+new_exit_df <- exit_df
+
+# names(new_exit_df) <- paste0(names(new_exit_df), "_exit")
+
+## Temporarily remove the exit user who has not filled out six months survey completely
 
 ```
 
-
-phone cognitive burden
+# Cbind them or merge them
 ```{r}
-mean_burden = mean(final_burden_df$cognitive_burden_phone)
-median_burden = median(final_burden_df$cognitive_burden_phone)
 
-phone_cognitive_burden_plot <- ggplot(final_burden_df, aes(x=cognitive_burden_phone)) + 
-  geom_histogram() +
-  ggtitle("Cognitive burden EMA") +
-  geom_vline(aes(xintercept = mean(cognitive_burden_phone)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(cognitive_burden_phone)), data=final_burden_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
-  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
-  ylim(0, 15) +
-  xlim(6,30)
-
+common_df <- merge(six_mon_exit_df, new_exit_df, by.x = "visualizerid", by.y = "visualizerid", all.x = TRUE, all.y = TRUE)
 
 ```
 
-watch cognitive burden
+get a smaller df with only total burden and engagement scales with user ids
+
 ```{r}
-mean_burden = mean(final_burden_df$cognitive_burden_watch)
-median_burden = median(final_burden_df$cognitive_burden_watch)
 
-watch_cognitive_burden_plot <- ggplot(final_burden_df, aes(x=cognitive_burden_watch)) + 
-  geom_histogram() +
-  ggtitle("Cognitive burden uEMA") +
-  geom_vline(aes(xintercept = mean(cognitive_burden_watch)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(cognitive_burden_watch)), data=final_burden_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
-  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
-  ylim(0, 15) +
-  xlim(6,30)
 
+keep_cols <- c("visualizerid", "total_phone_burden.x", "total_phone_burden.y", "total_watch_burden.x", "total_watch_burden.y", "engagement_phone.x", "engagement_phone.y", "engagement_watch.x", "engagement_watch.y")
+
+common_col_df <- common_df[, keep_cols]
+
+names(common_col_df) <- c("p_id", "phone_burden_6m", "phone_burden_exit", "watch_burden_6m", "watch_burden_exit", "engagement_phone_6m", "engagement_phone_exit", "engagement_watch_6m", "engagement_watch_exit")
 
 ```
 
-phone interruption burden
+box plot before after
 ```{r}
-mean_burden = mean(final_burden_df$interruption_burden_phone)
-median_burden = median(final_burden_df$interruption_burden_phone)
 
-phone_interrupt_burden_plot <- ggplot(final_burden_df, aes(x=interruption_burden_phone)) + 
-  geom_histogram() +
-  ggtitle("Interruption burden EMA") +
-  geom_vline(aes(xintercept = mean(interruption_burden_phone)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(interruption_burden_phone)), data=final_burden_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
-  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
-  ylim(0, 15) +
-  xlim(3,15)
-
+get_box_plot_pairs <- function(df, col1, col2, min_val, max_val){
+  keep <- c("p_id",col1, col2)
+  df <- df[, keep]
+  df_long <- melt(df, measure.vars = c(col1, col2))
+  plot_title <- gsub("_6m", "", col1)
+  
+  gplot <- ggplot(df_long, aes(x = variable, y = value, colour = p_id)) +
+    geom_point() +
+    geom_line(aes(group = p_id)) +
+    stat_summary(
+    geom = "point",
+    fun.y = "mean",
+    col = "black",
+    size = 3,
+    fill = "black") +
+    stat_summary(aes(y = value,group=1), fun.y=mean, colour="black", geom="line",group=1) +
+    ggtitle(paste0("Change in ", plot_title)) +
+    ylim(min_val, max_val)
+  
+  
+  return(gplot)
+  
+}
 
 ```
 
-watch interruption burden
+Get phone burden change plot
 ```{r}
-mean_burden = mean(final_burden_df$interruption_burden_watch)
-median_burden = median(final_burden_df$interruption_burden_watch)
 
-watch_interrupt_burden_plot <- ggplot(final_burden_df, aes(x=interruption_burden_watch)) + 
-  geom_histogram() +
-  ggtitle("Interruption burden uEMA") +
-  geom_vline(aes(xintercept = mean(interruption_burden_watch)), data=final_burden_df, linetype=5, color = "red") +
-  geom_vline(aes(xintercept = median(interruption_burden_watch)), data=final_burden_df, linetype=5, color = "green") +
-  geom_text(aes(x=mean_burden, label=paste0("\nmean = ", format(round(mean_burden, 2), nsmall = 2)), y=8), colour="black", angle=90, text=element_text(size=20)) +
-  geom_text(aes(x=median_burden, label=paste0("\nmed = ", format(round(median_burden, 2), nsmall = 2)), y=4), colour="black", angle=90, text=element_text(size=20)) +
-  ylim(0, 15) +
-  xlim(3,15)
-
+phone_burden_change <- get_box_plot_pairs(common_col_df, "phone_burden_6m", "phone_burden_exit", 19, 95)
 
 ```
+
+Get watch burden change plot
+```{r}
+
+watch_burden_change <- get_box_plot_pairs(common_col_df, "watch_burden_6m", "watch_burden_exit", 19, 95)
+
+```
+
+Get phone engagement plot
+```{r}
+
+
+phone_engagement_change <- get_box_plot_pairs(common_col_df, "engagement_phone_6m", "engagement_phone_exit", 2, 10)
+
+```
+
+get watch engagement plot
+```{r}
+
+watch_engagement_change <- get_box_plot_pairs(common_col_df, "engagement_watch_6m", "engagement_watch_exit", 2, 10)
+
+```
+
