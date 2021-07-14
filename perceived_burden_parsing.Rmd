@@ -12,6 +12,7 @@ library(ggplot2)
 library(psych)
 library(reshape2)
 library(dplyr)
+library(lsr)
 
 
 ```
@@ -506,6 +507,49 @@ get watch engagement plot
 ```{r}
 
 watch_engagement_change <- get_box_plot_pairs(common_col_df, "engagement_watch_6m", "engagement_watch_exit", 2, 10)
+
+```
+
+
+## Compare six months burden statistically
+using paired samples t-test
+```{r}
+
+t.test(six_mon_df$total_phone_burden, six_mon_df$total_watch_burden, paired = TRUE, alternative = "two.sided")
+
+```
+
+Compute effect sizes
+```{r}
+
+total_burdn_long_df <- six_mon_df[, c("visualizerid", "total_phone_burden", "total_watch_burden")]
+
+total_burdn_long_df <-melt(total_burdn_long_df, id.vars=c("visualizerid"))
+
+# cohen.d(six_mon_df$total_phone_burden, six_mon_df$total_watch_burden)
+
+cohensD(value~variable, data = total_burdn_long_df) 
+
+
+```
+
+Compare engagement statistically
+```{r}
+
+t.test(six_mon_df$engagement_phone, six_mon_df$engagement_watch, paired = TRUE, alternative = "two.sided")
+
+```
+
+Compute effect sizes
+```{r}
+
+total_engagement_long_df <- six_mon_df[, c("visualizerid", "engagement_phone", "engagement_watch")]
+
+total_engagement_long_df <-melt(total_engagement_long_df, id.vars=c("visualizerid"))
+
+# cohen.d(six_mon_df$total_phone_burden, six_mon_df$total_watch_burden)
+
+cohensD(value~variable, data = total_engagement_long_df) 
 
 ```
 
