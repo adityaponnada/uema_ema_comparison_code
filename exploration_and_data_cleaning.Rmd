@@ -240,7 +240,34 @@ time_df$uema_resp_time_mean <- as.numeric(time_df$uema_resp_time_mean)
 
 if there are dates to be filtered because of technical malfunction, include that code here
 ```{r}
-## To be updated here
+## Read the missing data file here
+missing_notes_file <- read.csv("D:/uema_ema_comparison_CHI/missing_notes_files.csv", sep = ",", header = TRUE)
+
+missing_notes_file <- subset(missing_notes_file, missing_notes_file$ACTION == "EXCLUDE")
+
+
+# replace empty columns with the same date as the other column
+
+missing_notes_file$START_DATE <- ifelse(missing_notes_file$START_DATE == "", missing_notes_file$END_DATE, missing_notes_file$START_DATE)
+missing_notes_file$END_DATE <- ifelse(missing_notes_file$END_DATE == "", missing_notes_file$START_DATE, missing_notes_file$END_DATE)
+
+# Convert to date time objects
+missing_notes_file$START_DATE <- as.POSIXct(missing_notes_file$START_DATE, format = "%Y-%m-%d")
+missing_notes_file$END_DATE <- as.POSIXct(missing_notes_file$END_DATE, format = "%Y-%m-%d")
+
+
+```
+
+Filter out these dates from the combined daily report file - first the common dates
+```{r}
+
+all_pid_row <- subset(missing_notes_file, missing_notes_file$P_ID == "ALL_PARTICIPANTS")
+
+global_start_date <- all_pid_row$START_DATE
+global_end_date <- all_pid_row$END_DATE
+
+
+
 ```
 
 
