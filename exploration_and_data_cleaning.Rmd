@@ -288,21 +288,21 @@ filter_exclusion_dates <- function(report_df, missing_df, device){
   for (pid in pid_list){
     print(paste0("participant: ", pid))
     missing_pid_subset <- subset(missing_df, missing_df$P_ID == pid)
-    print(nrow(missing_pid_subset))
+    # print(nrow(missing_pid_subset))
     for (i in 1:nrow(missing_pid_subset)){
-      print(paste0("i: ", i))
+      # print(paste0("i: ", i))
       start_date <- missing_pid_subset$START_DATE[i]
       end_date <- missing_pid_subset$END_DATE[i]
-      print(start_date)
-      print(end_date)
-      print(paste0("nrow before: ", nrow(report_df)))
+      # print(start_date)
+      # print(end_date)
+      # print(paste0("nrow before: ", nrow(report_df)))
       test_subset <- subset(report_df, report_df$participant_ID == pid)
       test_subset <- test_subset[(test_subset$date_object >= start_date & test_subset$date_object <= end_date), ]
-      print(paste0("test_df nrow: ", nrow(test_subset)))
+      # print(paste0("test_df nrow: ", nrow(test_subset)))
       # print(paste0("row: ", test_subset$date_object))
       report_df <- dplyr::setdiff(report_df, test_subset)
       # report_df <- subset(report_df, !(report_df$participant_ID == pid & report_df$date_object >= start_date) | (report_df$participant_ID == pid & report_df$date_object <= end_date))
-      print(paste0("nrow after: ", nrow(report_df)))
+      # print(paste0("nrow after: ", nrow(report_df)))
     }
   }
   
@@ -310,6 +310,16 @@ filter_exclusion_dates <- function(report_df, missing_df, device){
 }
 
 
+```
+
+Get burst and time df updated
+```{r}
+# original number of rows 6168
+
+burst_df <- filter_exclusion_dates(burst_df, missing_notes_file, "PHONE")
+
+# original number of rows 13415
+time_df <- filter_exclusion_dates(time_df, missing_notes_file, "WATCH")
 ```
 
 
