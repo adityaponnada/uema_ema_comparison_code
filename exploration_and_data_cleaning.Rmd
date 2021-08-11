@@ -266,12 +266,12 @@ missing_notes_file$P_ID <- paste0(missing_notes_file$P_ID, "@timestudy_com")
 Filter out these dates from the combined daily report file - first the common dates
 ```{r}
 
-all_pid_row <- subset(missing_notes_file, missing_notes_file$P_ID == "ALL_PARTICIPANTS")
+all_pid_row <- subset(missing_notes_file, missing_notes_file$P_ID == "ALL_PARTICIPANTS@timestudy_com")
 
 global_start_date <- all_pid_row$START_DATE
 global_end_date <- all_pid_row$END_DATE
 
-burst_df <- subset(burst_df, burst_df$date_object <= global_start_date | burst_df$date_object >= global_end_date)
+burst_df <- burst_df[(burst_df$date_object <= global_start_date | burst_df$date_object >= global_end_date), ]
 
 
 ```
