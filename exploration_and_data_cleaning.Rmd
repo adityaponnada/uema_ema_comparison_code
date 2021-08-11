@@ -258,6 +258,8 @@ missing_notes_file$END_DATE <- ifelse(missing_notes_file$END_DATE == "", missing
 missing_notes_file$START_DATE <- as.POSIXct(missing_notes_file$START_DATE, format = "%Y-%m-%d")
 missing_notes_file$END_DATE <- as.POSIXct(missing_notes_file$END_DATE, format = "%Y-%m-%d")
 
+missing_notes_file$P_ID <- paste0(missing_notes_file$P_ID, "@timestudy_com")
+
 
 ```
 
@@ -269,10 +271,46 @@ all_pid_row <- subset(missing_notes_file, missing_notes_file$P_ID == "ALL_PARTIC
 global_start_date <- all_pid_row$START_DATE
 global_end_date <- all_pid_row$END_DATE
 
-burst_df_test <- subset(burst_df, burst_df$date_object <= global_start_date | burst_df$date_object >= global_end_date)
+burst_df <- subset(burst_df, burst_df$date_object <= global_start_date | burst_df$date_object >= global_end_date)
 
 
 ```
+
+Filter out other phone exclusion dates for the burst_df
+```{r}
+
+
+
+filter_exclusion_dates <- function(report_df, missing_df, device){
+  missing_df <- subset(missing_df, missing_df$DEVICE == device | missing_df$DEVICE == "BOTH")
+  missing_df <- subset(missing_df, missing_df$P_ID != "ALL_PARTICIPANTS@timestudy_com")
+  pid_list <- unique(missing_df$P_ID)
+  for (pid in pid_list){
+    print(paste0("participant: ", pid))
+    missing_pid_subset <- subset(missing_df, missing_df$P_ID == pid)
+    print(nrow(missing_pid_subset))
+    for (i in nrow(missing_pid_subset)){
+      start_date <- missing_pid_subset$START_DATE[i]
+      end_date <- missing_pid_subset$END_DATE[i]
+      print(start_date)
+      print(end_date)
+      print(paste0("nrow before: ", nrow(report_df)))
+      test_subset <- subset(report_df, report_df$participant_ID == pid)
+      test_subset <- test_subset[(test_subset$date_object >= start_date & test_subset$date_object <= end_date), ]
+      print(paste0("test_df nrow: ", nrow(test_subset)))
+      # print(paste0("row: ", test_subset$date_object))
+      report_df <- dplyr::setdiff(report_df, test_subset)
+      # report_df <- subset(report_df, !(report_df$participant_ID == pid & report_df$date_object >= start_date) | (report_df$participant_ID == pid & report_df$date_object <= end_date))
+      print(paste0("nrow after: ", nrow(report_df)))
+    }
+  }
+  
+  return(report_df)
+}
+
+
+```
+
 
 
 ## Create a comprehensive completion rate for uEMA
