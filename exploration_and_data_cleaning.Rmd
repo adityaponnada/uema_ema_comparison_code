@@ -370,7 +370,6 @@ burst_completion_plot <- ggplot(burst_df, aes(x=burst_ema_completion_rate)) +
   ylim(0, 3000) +
   ggtitle("Burst EMA Completion Rate per BURST day")
 
-
 ```
 
 Burst EMA compliance rate
