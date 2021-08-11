@@ -236,6 +236,9 @@ time_df$uema_undo_num <- as.numeric(time_df$uema_undo_num)
 
 time_df$uema_resp_time_mean <- as.numeric(time_df$uema_resp_time_mean)
 
+burst_df$date_object <- as.POSIXct(burst_df$date, format = "%Y-%m-%d")
+time_df$date_object <- as.POSIXct(time_df$date, format = "%Y-%m-%d")
+
 ```
 
 if there are dates to be filtered because of technical malfunction, include that code here
@@ -266,6 +269,7 @@ all_pid_row <- subset(missing_notes_file, missing_notes_file$P_ID == "ALL_PARTIC
 global_start_date <- all_pid_row$START_DATE
 global_end_date <- all_pid_row$END_DATE
 
+burst_df_test <- subset(burst_df, burst_df$date_object <= global_start_date | burst_df$date_object >= global_end_date)
 
 
 ```
