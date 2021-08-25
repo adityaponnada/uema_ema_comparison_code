@@ -301,6 +301,37 @@ watch_burden_plot <- ggplot(six_mon_df, aes(x=total_watch_burden)) +
 
 ```
 
+## get box plot for phone and watch burden
+```{r}
+
+keep_cols <- c("visualizerid", "total_phone_burden", "total_watch_burden")
+
+
+pid_total_burden_df <- six_mon_df[, keep_cols]
+
+pid_burden_long_df <- melt(pid_total_burden_df, id.vars=c("visualizerid"))
+
+pid_burden_long_df$value[pid_burden_long_df$value == 0] <- 19
+
+
+```
+
+Get boxplot
+```{r}
+
+
+burden_boxplot <- ggplot(pid_burden_long_df, aes(x=variable, y=value)) + 
+  geom_boxplot() +
+  ggtitle("Perceived burden phone vs watch") +
+  theme_bw() +
+  xlab("") +
+  ylab("Perceived burden") +
+  theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 10, colour = "black"), title = element_text(size = 15))
+
+
+```
+
+
 
 ## Plot engagement plot for watch and phone
 

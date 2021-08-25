@@ -17,6 +17,7 @@ library(plotly)
 options(digits = 4)
 options(digits.secs = 3)
 library(corrplot)
+library(lme4)
 
 ```
 
@@ -241,6 +242,20 @@ time_df$date_object <- as.POSIXct(time_df$date, format = "%Y-%m-%d")
 
 ```
 
+Convert count columns to numeric:
+```{r}
+
+burst_df$burst_ema_expected_num <- as.numeric(burst_df$burst_ema_expected_num)
+burst_df$burst_ema_original_prompted_num <- as.numeric(burst_df$burst_ema_original_prompted_num)
+burst_df$burst_ema_completed_num <- as.numeric(burst_df$burst_ema_completed_num)
+
+time_df$uema_expected_num <- as.numeric(time_df$uema_expected_num)
+time_df$uema_prompted_num <- as.numeric(time_df$uema_prompted_num)
+time_df$uema_completed_num <- as.numeric(time_df$uema_completed_num)
+
+```
+
+
 if there are dates to be filtered because of technical malfunction, include that code here
 ```{r}
 ## Read the missing data file here
@@ -286,7 +301,7 @@ filter_exclusion_dates <- function(report_df, missing_df, device){
   missing_df <- subset(missing_df, missing_df$P_ID != "ALL_PARTICIPANTS@timestudy_com")
   pid_list <- unique(missing_df$P_ID)
   for (pid in pid_list){
-    print(paste0("participant: ", pid))
+    # print(paste0("participant: ", pid))
     missing_pid_subset <- subset(missing_df, missing_df$P_ID == pid)
     # print(nrow(missing_pid_subset))
     for (i in 1:nrow(missing_pid_subset)){
@@ -322,6 +337,24 @@ burst_df <- filter_exclusion_dates(burst_df, missing_notes_file, "PHONE")
 time_df <- filter_exclusion_dates(time_df, missing_notes_file, "WATCH")
 ```
 
+Also check by removing outliers
+```{r}
+
+remove_outliers_from_df <- function(df){
+  outliers <- c("uniformlyharmfulbush@timestudy_com", "penpalsandbanklifting@timstudy_com")
+  df <- subset(df, df$participant_ID %!in% outliers)
+  return(df)
+}
+
+```
+
+Get non-outlier dfs
+```{r}
+time_df <- remove_outliers_from_df(time_df)
+burst_df <- remove_outliers_from_df(burst_df)
+
+
+```
 
 
 ## Create a comprehensive completion rate for uEMA
@@ -571,13 +604,22 @@ pid_burst_time_df <- join(time_pid_df, burst_pid_df)
 get_perc_box_plot <- function(df){
   keep_cols <- c("participant_ID", "uema_completion_rate", "uema_compliance_rate", "burst_completion_rate", "burst_compliance_rate", "uema_validation_perc")
   subset_df <- df[, keep_cols]
+  names(subset_df) <- c("participant_ID", "uema_completion", "uema_compliance", "ema_completion", "ema_compliance", "uema_validation")
   df_melt <- melt(subset_df, id.var="participant_ID")
   box_comp_plot<- ggplot(data = df_melt, aes(x=variable, y=value)) + 
   geom_boxplot() + 
   stat_summary(fun.y = mean, geom = "errorbar", aes(ymax= ..y.., ymin = ..y..),
                width = 0.75, linetype="dashed") +
   ylim(0, 1) +
-  ggtitle("uEMA and Burst EMA compliance, completion, and validation rate")
+  ggtitle("Compliance, completion, and validation rate") +
+    xlab("") +
+    ylab("Rate") +
+    # theme(axis.title = element_text(size = 50), axis.text = element_text(size = 20))
+    # theme(axis.title.y = element_text(size = 50), axis.text.y = element_text(size = 20)) +
+    # theme(title = element_text(size = 30)) +
+    theme_bw() +
+    theme(axis.title = element_text(size = 15), axis.text = element_text(size = 10, colour = "black"), title = element_text(size = 15))
+  
   return(box_comp_plot)
 }
 
@@ -607,7 +649,10 @@ get_adjacent_bar_plots <- function(df){
   df_melt <- melt(df, id.var = "p_no")
   adj_plot <- ggplot(data = df_melt, aes(x = p_no, y = value, fill = variable)) +
     geom_bar(stat = 'identity', position = 'dodge') +
-    ggtitle('response and validation rates by participants')
+    ggtitle('response and validation rates by participants') +
+    xlab("") +
+    ylab("Rate") +
+    theme_bw()
   
   return(adj_plot)
   
@@ -692,14 +737,17 @@ pid_burst_time_sans_outlier_df <- subset(pid_burst_time_df, pid_burst_time_df$pa
 
 burst_df$date_stamp <- as.POSIXct(burst_df$date, format = "%Y-%m-%d")
 
-burst_subset_df <- burst_df[, c("participant_ID", "date", "study_mode", "date_stamp", "uema_completed_num", "uema_prompted_num", "burst_ema_completed_num", "burst_ema_original_prompted_num")]
+burst_subset_df <- burst_df[, c("participant_ID", "date", "study_mode", "date_stamp", "uema_completed_num", "uema_prompted_num", "burst_ema_completed_num", "burst_ema_original_prompted_num", "burst_ema_expected_num")]
 
-time_subset_df <- time_df[, c("participant_ID", "date", "study_mode", "date_stamp", "uema_completed_num", "uema_prompted_num", "burst_ema_completed_num", "burst_ema_original_prompted_num")]
+time_subset_df <- time_df[, c("participant_ID", "date", "study_mode", "date_stamp", "uema_completed_num", "uema_prompted_num", "burst_ema_completed_num", "burst_ema_original_prompted_num", "uema_expected_num")]
 
 ```
 
 row bind them
 ```{r}
+
+colnames(burst_subset_df)[9] <- "expected_num"
+colnames(time_subset_df)[9] <- "expected_num"
 
 clean_time_burst_df <- rbind(burst_subset_df, time_subset_df)
 
@@ -715,7 +763,7 @@ clean_time_burst_df <- arrange(clean_time_burst_df, participant_ID, date_stamp)
 Finally, create a sum column
 ```{r}
 
-cols.num <- c("uema_completed_num", "uema_prompted_num", "burst_ema_completed_num", "burst_ema_original_prompted_num")
+cols.num <- c("uema_completed_num", "uema_prompted_num", "burst_ema_completed_num", "burst_ema_original_prompted_num", "expected_num")
 clean_time_burst_df[cols.num] <- sapply(clean_time_burst_df[cols.num],as.numeric)
 
 
@@ -744,6 +792,104 @@ final_user_list <- unique(clean_time_burst_df$participant_ID)
 final_user_list <- gsub("@timestudy_com", "", final_user_list)
 
 write.csv(file = "D:/uema_ema_comparison_CHI/perceived_burden/final_user_list.csv", final_user_list, sep = ",", row.names = FALSE, quote = FALSE)
+
+```
+
+## Perform glm for compliance and completion rate comparisons between uEMA and EMA
+
+Prepare data
+```{r}
+names(clean_time_burst_df) <- c("P_ID", "DATE", "TYPE", "DATE_STAMP", "UEMA_COMPLETED", "UEMA_PROMPTED", "EMA_COMPLETED", "EMA_PROMPTED", "TOTAL_EXPECTED", "TOTAL_PROMPTED", "TOTAL_COMPLETED")
+
+```
+
+Add a column of failures for expected and delivered prompts - correct for incorrect expected number of prompts
+```{r}
+
+for (i in 1:nrow(clean_time_burst_df)){
+  if (clean_time_burst_df$TOTAL_EXPECTED[i] < clean_time_burst_df$TOTAL_PROMPTED[i]){
+    clean_time_burst_df$TOTAL_EXPECTED[i] = clean_time_burst_df$TOTAL_PROMPTED[i]
+  }
+}
+
+
+
+clean_time_burst_df$EXPD_MISSED <- clean_time_burst_df$TOTAL_EXPECTED - clean_time_burst_df$TOTAL_COMPLETED
+clean_time_burst_df$PMPD_MISSED <- clean_time_burst_df$TOTAL_PROMPTED - clean_time_burst_df$TOTAL_COMPLETED
+
+
+```
+
+Convert TYPE to numeric
+```{r}
+
+clean_time_burst_df$TYPE_NUM[clean_time_burst_df$TYPE == "BURST"] <- 0
+clean_time_burst_df$TYPE_NUM[clean_time_burst_df$TYPE == "TIME"] <- 1
+
+```
+
+
+Run the completion model
+```{r}
+completion_mod <- glmer(cbind(TOTAL_COMPLETED, PMPD_MISSED) ~ TYPE_NUM + (1 | P_ID), family = "binomial", data=clean_time_burst_df)
+
+# print(completion_mod, corr = FALSE)
+
+summary(completion_mod)
+
+```
+
+Get CIs and odds ratios
+```{r}
+
+completion_se <- sqrt(diag(vcov(completion_mod)))
+# table of estimates with 95% CI
+(completion_tab <- cbind(Est = fixef(completion_mod), LL = fixef(completion_mod) - 1.96 * completion_se, UL = fixef(completion_mod) + 1.96 *
+    completion_se))
+
+exp(completion_tab)
+
+```
+
+
+
+
+Add a test compliance column
+```{r}
+
+clean_time_burst_df$COMPLIANCE <- clean_time_burst_df$TOTAL_COMPLETED/clean_time_burst_df$TOTAL_EXPECTED
+
+# clean_time_burst_df$COMPLIANCE[clean_time_burst_df$COMPLIANCE >= 1.0] <- 1.0
+
+# clean_time_burst_df <- subset(clean_time_burst_df, clean_time_burst_df$COMPLIANCE >= 0)
+
+# clean_time_burst_df$TOTAL_EXPECTED[clean_time_burst_df$TOTAL_EXPECTED < clean_time_burst_df$TOTAL_PROMPTED] <- clean_time_burst_df$TOTAL_PROMPTED
+
+```
+
+
+Run the compliance model
+```{r}
+
+compliance_mod <- glmer(cbind(TOTAL_COMPLETED, EXPD_MISSED) ~ TYPE_NUM + (1 | P_ID), family = "binomial", data=clean_time_burst_df)
+
+# print(completion_mod, corr = FALSE)
+
+summary(compliance_mod)
+
+
+```
+
+Get CIs and odds ratios
+```{r}
+
+compliance_se <- sqrt(diag(vcov(compliance_mod)))
+# table of estimates with 95% CI
+(compiance_tab <- cbind(Est = fixef(compliance_mod), LL = fixef(compliance_mod) - 1.96 * compliance_se, UL = fixef(completion_mod) + 1.96 *
+    compliance_se))
+
+exp(compiance_tab)
+
 
 ```
 
