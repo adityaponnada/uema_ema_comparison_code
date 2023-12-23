@@ -21,7 +21,7 @@ library(lsr)
 ```{r}
 
 
-perceived_burden_data <- read.csv(file = "D:/uema_ema_comparison_CHI/perceived_burden/TIMEMAIN-AdityaBurden_DATA_2021-07-07_1126.csv", sep = ",", header = TRUE)
+perceived_burden_data <- read.csv(file = "D:/uema_ema_comparison_CHI/perceived_burden/TIMEMAIN-AdityaBurden_DATA_2021-11-23_0942.csv", sep = ",", header = TRUE)
 
 ```
 
@@ -304,10 +304,12 @@ watch_burden_plot <- ggplot(six_mon_df, aes(x=total_watch_burden)) +
 ## get box plot for phone and watch burden
 ```{r}
 
+# keep_cols <- c("visualizerid", "total_phone_burden", "total_watch_burden")
 keep_cols <- c("visualizerid", "total_phone_burden", "total_watch_burden")
 
 
 pid_total_burden_df <- six_mon_df[, keep_cols]
+# pid_total_burden_df <- exit_df[, keep_cols]
 
 pid_burden_long_df <- melt(pid_total_burden_df, id.vars=c("visualizerid"))
 
@@ -322,11 +324,39 @@ Get boxplot
 
 burden_boxplot <- ggplot(pid_burden_long_df, aes(x=variable, y=value)) + 
   geom_boxplot() +
-  ggtitle("Perceived burden phone vs watch") +
+  # ggtitle("Perceived burden phone vs watch") +
   theme_bw() +
   xlab("") +
   ylab("Perceived burden") +
-  theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 10, colour = "black"), title = element_text(size = 15))
+  theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), legend.text = element_text(size=15)) +
+  scale_x_discrete(labels=c("EMA", expression(paste(mu,"EMA")))) +
+  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax= ..y.., ymin = ..y.., color = "Mean"),
+               width = 0.75, linetype="solid") +
+    stat_summary(fun.y = median, geom = "errorbar", aes(ymax= ..y.., ymin = ..y.., color = "Median"),
+               width = 0.75, linetype="solid") +
+     scale_colour_manual("", values = c(Median = "blue", Mean = "red")) +
+  theme(
+    legend.position = c(0.65, 0.90)
+    # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
+    #   color = "#D9D9D9",
+    #   size = 15)
+  ) +
+    guides(colour = guide_legend(nrow = 1)) +
+  ggtitle("All participants") +
+  ylim(19, 95)
+
+ggsave(
+  "uema_burden_6m.png",
+  plot = burden_boxplot,
+  device = "png",
+  path = "D:/uema_ema_comparison_CHI/revised_thesis_plots",
+  scale = 1,
+  height = 5,
+  width = 5,
+  units = "in",
+  limitsize = FALSE,
+  dpi = 300
+)
 
 
 ```
@@ -338,8 +368,10 @@ burden_boxplot <- ggplot(pid_burden_long_df, aes(x=variable, y=value)) +
 For phone
 ```{r}
 
-mean_engagement = mean(six_mon_df$engagement_phone)
-median_engagement = median(six_mon_df$engagement_phone)
+# mean_engagement = mean(six_mon_df$engagement_phone)
+mean_engagement = mean(exit_df$engagement_phone)
+# median_engagement = median(six_mon_df$engagement_phone)
+median_engagement = median(exit_df$engagement_phone)
 
 phone_engagement_plot <- ggplot(six_mon_df, aes(x=engagement_phone)) + 
   geom_histogram() +
@@ -546,6 +578,7 @@ watch_engagement_change <- get_box_plot_pairs(common_col_df, "engagement_watch_6
 using paired samples t-test
 ```{r}
 
+# t.test(exit_df$total_phone_burden, exit_df$total_watch_burden, paired = TRUE, alternative = "two.sided")
 t.test(six_mon_df$total_phone_burden, six_mon_df$total_watch_burden, paired = TRUE, alternative = "two.sided")
 
 ```
@@ -554,6 +587,7 @@ Compute effect sizes
 ```{r}
 
 total_burdn_long_df <- six_mon_df[, c("visualizerid", "total_phone_burden", "total_watch_burden")]
+# total_burdn_long_df <- exit_df[, c("visualizerid", "total_phone_burden", "total_watch_burden")]
 
 total_burdn_long_df <-melt(total_burdn_long_df, id.vars=c("visualizerid"))
 

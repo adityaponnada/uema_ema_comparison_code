@@ -25,13 +25,16 @@ library(lme4)
 Read all the report files and combine them into one data frame for analysis
 ```{r}
 
-report_file_loc = "D:/TIME_CLUSTER_PREPROCESSED_20210702/daily_report/"
+# report_file_loc = "D:/TIME_CLUSTER_PREPROCESSED_20210702/daily_report/"
+# 
+# file_pattern <- paste0(report_file_loc, '*@timestudy_com.csv')
+# 
+# file_matches <- Sys.glob(file_pattern)
+# 
+# daily_report_df <- do.call(rbind, lapply(file_matches, read.csv))
 
-file_pattern <- paste0(report_file_loc, '*@timestudy_com.csv')
-
-file_matches <- Sys.glob(file_pattern)
-
-daily_report_df <- do.call(rbind, lapply(file_matches, read.csv))
+# daily_report_df <- read.csv("E:/SHARED_GLOBUS_DATA/Combined_daily_report/combined_report_1634336199.8833838.csv")
+daily_report_df <- read.csv("E:/SHARED_GLOBUS_DATA/Combined_daily_report/combined_report_v1_1637614608.3273082.csv")
 
 ```
 
@@ -40,6 +43,9 @@ daily_report_df <- do.call(rbind, lapply(file_matches, read.csv))
 For some participants the ID was changed. So we merge those rows together
 ```{r}
 daily_report_df$participant_ID[daily_report_df$participant_ID == "upliftedsulfatedreamboat@timestudy_com"] <- "startlingrevengevillage@timestudy_com"
+
+daily_report_df <- subset(daily_report_df, daily_report_df$participant_ID != "stephen4_internal@timestudy_com")
+daily_report_df <- subset(daily_report_df, daily_report_df$participant_ID != "stephen6_internal@timestudy_com")
 ```
 
 ## Read the watch assignment file
@@ -57,9 +63,10 @@ Note: In this file, participant status codes mean:
 
 ```{r}
 
-participant_status_df <- read.csv(file = "D:/TIME_CLUSTER_PREPROCESSED_20210702/TIMEMAIN-ParticipantTrackingC_DATA_2021-06-30_0732.csv", sep = ",", header = TRUE)
+participant_status_df <- read.csv(file = "D:/TIME_CLUSTER_PREPROCESSED_20210702/TIMEMAIN-WatchTrainingDate_DATA_LABELS_2021-11-23_0937.csv", sep = ",", header = TRUE)
 
-names(participant_status_df) <- c("record_id", "participant_id", "participant_status", "watch_assign_date", "device_tracking")
+# names(participant_status_df) <- c("record_id", "participant_id", "participant_status", "watch_assign_date", "device_tracking")
+names(participant_status_df) <- c("record_id", "participant_id", "watch_assign_date")
 
 participant_status_df$participant_id <- paste0(participant_status_df$participant_id, "@timestudy_com")
 
@@ -120,12 +127,25 @@ keep_six_months_completed <- function(df, num_months){
 
 ```
 
+
+
 Use the function to keep users with at least 6 months of data
 ```{r}
 
-daily_report_6m_df <- keep_six_months_completed(daily_report_df, 6)
+daily_report_6m_df <- keep_six_months_completed(daily_report_df, 12)
 
 ```
+
+
+Add a dummy df for only those with 12 months completed - uncomment when only want to run on 12 month users
+```{r}
+# test_df <- keep_six_months_completed(daily_report_df, 12)
+# 
+# daily_report_6m_df <- test_df
+
+```
+
+
 
 ## Convert sleep wake times to date time objects
 ```{r}
@@ -138,6 +158,8 @@ daily_report_6m_df$current_sleep_timestamp <- as.POSIXct(daily_report_6m_df$curr
 ## Remove days with awkward sleep duration due to error
 Check summary first
 ```{r}
+
+daily_report_6m_df$sleep_time_reported_hr <- as.numeric(daily_report_6m_df$sleep_time_reported_hr)
 
 describe(daily_report_6m_df$sleep_time_reported_hr)
 
@@ -174,8 +196,11 @@ p_ids <- unique(time_df$participant_ID)
 
 
 for (p_id in p_ids){
+  # print(p_id)
   start_date <- watch_users_df$watch_training_day[watch_users_df$participant_id == p_id]
+  # print(start_date)
   time_df <- time_df[!(time_df$participant_ID == p_id & time_df$date_stamp <= start_date), ]
+  # print(nrow(time_df))
 }
 
 ```
@@ -210,6 +235,7 @@ DAY_HOUR = 24.0
 
 Compute expected prompts for burst EMA
 ```{r}
+
 
 burst_df$burst_ema_expected_num <- as.integer((DAY_HOUR - burst_df$sleep_time_reported_hr - EMA_BUFFER_HOUR)*EMA_PER_HOUR)
 
@@ -381,6 +407,9 @@ time_df$uema_compliance_rate[time_df$uema_compliance_rate >= 1.0] <- 1.0
 
 
 ```
+
+
+
 
 
 ## Plot day level completion and compliance rate for EMA (with mean median highlighted)
@@ -606,19 +635,41 @@ get_perc_box_plot <- function(df){
   subset_df <- df[, keep_cols]
   names(subset_df) <- c("participant_ID", "uema_completion", "uema_compliance", "ema_completion", "ema_compliance", "uema_validation")
   df_melt <- melt(subset_df, id.var="participant_ID")
+  
+  uema <- expression(paste(mu, "EMA"))
+  uema_completion <- paste(uema, " completion")
+  uema_compliance <- paste(uema, " compliance")
+  ema_compliance <- "EMA compliance"
+  ema_completion <- "EMA completion"
+  uema_validation <- paste(uema, " validation")
+  
   box_comp_plot<- ggplot(data = df_melt, aes(x=variable, y=value)) + 
   geom_boxplot() + 
   stat_summary(fun.y = mean, geom = "errorbar", aes(ymax= ..y.., ymin = ..y..),
                width = 0.75, linetype="dashed") +
   ylim(0, 1) +
-  ggtitle("Compliance, completion, and validation rate") +
+  # ggtitle("Compliance, completion, and validation rate") +
     xlab("") +
     ylab("Rate") +
     # theme(axis.title = element_text(size = 50), axis.text = element_text(size = 20))
     # theme(axis.title.y = element_text(size = 50), axis.text.y = element_text(size = 20)) +
     # theme(title = element_text(size = 30)) +
     theme_bw() +
-    theme(axis.title = element_text(size = 15), axis.text = element_text(size = 10, colour = "black"), title = element_text(size = 15))
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), legend.text = element_text(size=15)) +
+    scale_x_discrete(labels=c(expression(paste(mu, "EMA completion")), expression(paste(mu, "EMA compliance")), "EMA completion", "EMA compliance", expression(paste(mu, "EMA validation")))) +
+    stat_summary(fun.y = mean, geom = "errorbar", aes(ymax= ..y.., ymin = ..y.., color = "Mean"),
+               width = 0.75, linetype="solid") +
+    stat_summary(fun.y = median, geom = "errorbar", aes(ymax= ..y.., ymin = ..y.., color = "Median"),
+               width = 0.75, linetype="solid") +
+     scale_colour_manual("", values = c(Median = "blue", Mean = "red")) +
+  theme(
+    legend.position = c(0.65, 0.12)
+    # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
+    #   color = "#D9D9D9",
+    #   size = 15)
+  ) +
+    guides(colour = guide_legend(nrow = 1)) +
+    ggtitle("For completed participants")
   
   return(box_comp_plot)
 }
@@ -629,6 +680,19 @@ Get the plot
 ```{r}
 
 uema_burst_boxplot <- get_perc_box_plot(pid_burst_time_df)
+
+ggsave(
+  "uema_compliance_12m.png",
+  plot = uema_burst_boxplot,
+  device = "png",
+  path = "D:/uema_ema_comparison_CHI/revised_thesis_plots",
+  scale = 1,
+  height = 5,
+  width = 10,
+  units = "in",
+  limitsize = FALSE,
+  dpi = 300
+)
 
 ```
 
@@ -760,7 +824,7 @@ clean_time_burst_df <- arrange(clean_time_burst_df, participant_ID, date_stamp)
 
 ```
 
-Finally, create a sum column
+Finally, create a sum column and convert to numerics
 ```{r}
 
 cols.num <- c("uema_completed_num", "uema_prompted_num", "burst_ema_completed_num", "burst_ema_original_prompted_num", "expected_num")
@@ -791,7 +855,7 @@ final_user_list <- unique(clean_time_burst_df$participant_ID)
 
 final_user_list <- gsub("@timestudy_com", "", final_user_list)
 
-write.csv(file = "D:/uema_ema_comparison_CHI/perceived_burden/final_user_list.csv", final_user_list, sep = ",", row.names = FALSE, quote = FALSE)
+write.csv(file = "D:/uema_ema_comparison_CHI/perceived_burden/final_user_list_12m.csv", final_user_list, sep = ",", row.names = FALSE, quote = FALSE)
 
 ```
 
@@ -890,6 +954,596 @@ compliance_se <- sqrt(diag(vcov(compliance_mod)))
 
 exp(compiance_tab)
 
+
+```
+
+## Plot seasonality for uEMA
+
+```{r}
+
+plot_seasonality_uema <- function(df){
+  
+  to_keep <- c("participant_ID", "days_into_study", "uema_compliance_rate", "uema_completion_rate")
+  df <- df[, to_keep]
+  
+  df <- df %>% group_by(participant_ID) %>% mutate(actual_days = row_number())
+  
+  max_day <- max(df$actual_days)
+  split_val <- max_day/2
+  
+  keep_only <- c("actual_days", "uema_compliance_rate", "uema_completion_rate")
+  
+  df <- df[, keep_only]
+  
+  df <- reshape2::melt(df, id.var='actual_days')
+  
+  line_plot <- ggplot(data=df, aes(x=actual_days, y=value, color = variable)) +
+    # geom_line(size = 1) +
+    # geom_point() +
+    theme_bw() +
+    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
+    scale_x_continuous(limits = c(0, 260), breaks = seq(0, 260, by = 130)) +
+    # scale_x_discrete(labels = c("Home", "School", "Work", "Friend", "Unlabeled", "Transit", "Other")) +
+    # theme(axis.text.x = element_text(angle = 45, margin = margin(t = 5))) +
+    # stat_summary(geom="ribbon", fun.data=mean_cl_normal, conf.int=0.95, fill="lightblue", alpha = 0.5) +
+    stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
+               width = 0.1, size = 1) +
+    # scale_colour_manual("", values = c(Compliance = "blue", Completion = "red")) +
+    # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
+    labs(x = "", y = "Rate", color = "Rate type") +
+    scale_color_manual(labels = c("Compliance rate", "Completion rate"), values = c("red", "blue")) +
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), axis.title.x=element_blank(), legend.text = element_text(size = 15)) +
+    ggtitle("µEMA response rates") +
+    theme(
+    legend.position = c(0.50, 0.25)
+    # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
+    #   color = "#D9D9D9",
+    #   size = 15)
+  ) +
+    guides(colour = guide_legend(nrow = 2))
+  
+  return(line_plot)
+  
+}
+
+```
+
+## Plot seasonality for EMA
+
+```{r}
+
+plot_seasonality_ema <- function(df){
+  
+  to_keep <- c("participant_ID", "days_into_study", "burst_ema_compliance_rate", "burst_ema_completion_rate")
+  df <- df[, to_keep]
+  
+  df <- df %>% group_by(participant_ID) %>% mutate(actual_days = row_number())
+  
+  max_day <- max(df$actual_days)
+  split_val <- max_day/2
+  
+  keep_only <- c("actual_days", "burst_ema_compliance_rate", "burst_ema_completion_rate")
+  
+  df <- df[, keep_only]
+  
+  df <- reshape2::melt(df, id.var='actual_days')
+  
+  line_plot <- ggplot(data=df, aes(x=actual_days, y=value, color = variable)) +
+    # geom_line(size = 1) +
+    # geom_point() +
+    theme_bw() +
+    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
+    scale_x_continuous(limits = c(0, 106), breaks = seq(0, 106, by = 53)) +
+    # scale_x_discrete(labels = c("Home", "School", "Work", "Friend", "Unlabeled", "Transit", "Other")) +
+    # theme(axis.text.x = element_text(angle = 45, margin = margin(t = 5))) +
+    # stat_summary(geom="ribbon", fun.data=mean_cl_normal, conf.int=0.95, fill="lightblue", alpha = 0.5) +
+    stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
+               width = 0.1, size = 1) +
+    # scale_colour_manual("", values = c(Compliance = "blue", Completion = "red")) +
+    # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
+    labs(x = "", y = "Rate", color = "Rate type") +
+    scale_color_manual(labels = c("Compliance rate", "Completion rate"), values = c("red", "blue")) +
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), axis.title.x=element_blank(), legend.text = element_text(size = 15)) +
+    ggtitle("EMA response rates") +
+    theme(
+    legend.position = c(0.50, 0.25)
+    # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
+    #   color = "#D9D9D9",
+    #   size = 15)
+  ) +
+    guides(colour = guide_legend(nrow = 2))
+  
+  return(line_plot)
+  
+}
+
+```
+
+## Plot participant distribution by days
+```{r}
+
+plot_num_part_days <- function(df, type){
+  
+  if (type == "uema"){
+    max_limit = 260
+    day_type = "µEMA days"
+    
+  } else if (type == "ema"){
+    max_limit = 106
+    day_type = "EMA days"
+  }
+  
+  split_val = max_limit/2
+  
+  
+  keep_names <- c("participant_ID", "days_into_study")
+  df <- df[, keep_names]
+  
+  df <- df %>% group_by(participant_ID) %>% mutate(actual_days = row_number())
+  
+  
+  df <- df[, c("participant_ID", "actual_days")]
+  
+  
+  # agg_df <- distinct(df)
+  
+  agg_df <- aggregate(df$actual_days, by = list(df$actual_days), FUN = length)
+  names(agg_df) <- c("Days", "Num_Ps")
+  
+  agg_df$Days <- as.numeric(agg_df$Days)
+  
+  # agg_df <- summarise(group_by(df,Participant_ID, EXPOSURE_DAY_NO),length(Participant_ID))
+  # names(agg_df) <- c("Participant_ID", "max_expo_day", "COUNT")
+  # 
+  # agg_df <- agg_df %>%
+  # group_by(Participant_ID, max_expo_day) %>%
+  # mutate(COMPLETION_RATE = COUNT / sum(COUNT))
+  # 
+  # agg_df <- subset(agg_df, agg_df$ANSWER_STATUS == "Answered")
+  # 
+  # agg_df$max_expo_day <- as.numeric(agg_df$max_expo_day)
+  # 
+  line_plot <- ggplot(data=agg_df, aes(x=Days, y=Num_Ps)) +
+    geom_line(size = 1) +
+    # geom_point() +
+    theme_bw() +
+    scale_y_continuous(limits = c(0, 50), breaks = seq(0, 50, by = 25)) +
+    scale_x_continuous(limits = c(0, max_limit), breaks = seq(0, max_limit, by = split_val)) +
+    # scale_x_discrete(labels = c("Home", "School", "Work", "Friend", "Unlabeled", "Transit", "Other")) +
+    # theme(axis.text.x = element_text(angle = 45, margin = margin(t = 5))) +
+    # stat_summary(geom="ribbon", fun.data=mean_cl_normal, conf.int=0.95, fill="lightblue", alpha = 0.5) +
+    # stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
+    #            width = 0.1, size = 1) +
+    # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
+    labs(x = day_type, y = "No. participants") +
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15))
+   
+  
+   # ylim(0, 1) +
+    # xlim(0, 300)
+  
+  # box_plot <- ggplot(agg_df, aes(x=DAYS_IN_THE_STUDY, y=COMPLETION_RATE)) + 
+  # geom_boxplot() +
+  #   ggtitle("Completion | Days in the study")
+  # 
+  # summary_object <- describeBy(agg_df$COMPLETION_RATE, group = agg_df$DAYS_IN_THE_STUDY)
+  # 
+  # print(summary_object)
+  
+  # return_list <- c(summary_object, box_plot)
+  
+  return(line_plot)
+}
+
+```
+
+## Place plots vertically
+```{r}
+
+library(ggpubr)
+
+uema_seasonality <- plot_seasonality_uema(time_df)
+ema_seasonality <- plot_seasonality_ema(burst_df)
+uema_num <- plot_num_part_days(time_df, "uema")
+ema_num <- plot_num_part_days(burst_df, "ema")
+
+uema_arranged <- ggarrange(uema_seasonality, uema_num, ncol = 1, nrow = 2)
+ema_arranged <- ggarrange(ema_seasonality, ema_num, ncol = 1, nrow = 2)
+
+```
+
+Save the plots
+```{r}
+
+ggsave(
+    "uema_season_12m.png",
+    plot = uema_arranged,
+    device = "png",
+    path = "D:/uema_ema_comparison_CHI/revised_thesis_plots",
+    scale = 1,
+    height = 6,
+    width = 5,
+    units = "in",
+    limitsize = FALSE,
+    dpi = 300
+)
+
+
+ggsave(
+    "ema_season_12m.png",
+    plot = ema_arranged,
+    device = "png",
+    path = "D:/uema_ema_comparison_CHI/revised_thesis_plots",
+    scale = 1,
+    height = 6,
+    width = 5,
+    units = "in",
+    limitsize = FALSE,
+    dpi = 300
+)
+
+
+```
+
+Return actual days column
+
+```{r}
+
+
+return_actual_days <- function(df){
+   keep_names <- c("participant_ID", "burst_ema_compliance_rate", "burst_ema_completion_rate", "days_into_study")
+  df <- df[, keep_names]
+  
+  df <- df %>% group_by(participant_ID) %>% mutate(actual_days = row_number())
+  
+  
+  df <- df[, c("participant_ID", "burst_ema_compliance_rate", "burst_ema_completion_rate", "actual_days")]
+  return(df)
+}
+
+```
+
+Return the last burst for participants
+```{r}
+
+return_last_burst <- function(df, num_days){
+  
+  df <- df %>% 
+   group_by(participant_ID) %>% 
+   slice(tail(row_number(), num_days))
+  
+  return(df)
+  
+}
+
+```
+
+Day by day changes in min of DND and battery off - watch
+```{r}
+
+plot_data_loss_sources_watch <- function(df){
+  
+  to_keep <- c("participant_ID", "days_into_study", "watch_off_dur_shut", "watch_dnd_mode_min")
+  df <- df[, to_keep]
+  
+  # df$watch_off_dur_shut <- as.numeric(df$watch_off_dur_shut)
+  # df$watch_dnd_mode_min <- as.numeric(df$watch_dnd_mode_min)
+  
+  df <- df %>% group_by(participant_ID) %>% mutate(actual_days = row_number())
+  
+  # max_day <- max(df$actual_days)
+  # split_val <- max_day/2
+  
+  
+  keep_only <- c("actual_days", "watch_off_dur_shut", "watch_dnd_mode_min")
+  
+  df <- df[, keep_only]
+  
+  df <- reshape2::melt(df, id.var='actual_days')
+  
+  df$value <- as.numeric(df$value)
+  
+  max_min <- max(df$value, na.rm = TRUE)
+  split_val <- max_min/2
+
+  # print(max_min)
+  # print(split_val)
+  
+  line_plot <- ggplot(data=df, aes(x=actual_days, y=value, color = variable)) +
+    # geom_line(size = 1) +
+    # geom_point() +
+    theme_bw() +
+    # ylim(0,300) +
+    # scale_y_continuous(limits = c(0, 300, breaks = seq(0, 300, by = 150))) +
+    scale_y_continuous(limits = c(0, 1500, breaks = seq(0, 1500, by = 300))) +
+    scale_x_continuous(limits = c(0, 260), breaks = seq(0, 260, by = 130)) +
+    # scale_x_discrete(labels = c("Home", "School", "Work", "Friend", "Unlabeled", "Transit", "Other")) +
+    # theme(axis.text.x = element_text(angle = 45, margin = margin(t = 5))) +
+    # stat_summary(geom="ribbon", fun.data=mean_cl_normal, conf.int=0.95, fill="lightblue", alpha = 0.5) +
+    stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
+               width = 0.1, size = 1) +
+    # scale_colour_manual("", values = c(Compliance = "blue", Completion = "red")) +
+    # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
+    labs(x = "", y = "Minutes per day", color = "Watch is") +
+    scale_color_manual(labels = c("off", "in DnD"), values = c("red", "blue")) +
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), axis.title.x=element_blank(), legend.text = element_text(size = 15)) +
+    ggtitle("µEMA data loss sources") +
+    theme(
+    legend.position = c(0.25, 0.85)
+    # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
+    #   color = "#D9D9D9",
+    #   size = 15)
+  ) +
+    guides(colour = guide_legend(nrow = 1))
+  
+  return(line_plot)
+  
+}
+
+```
+
+Do the same for EMA/phone
+```{r}
+
+plot_data_loss_sources_phone <- function(df){
+  
+  to_keep <- c("participant_ID", "days_into_study", "phone_off_min", "phone_dnd_mode_min")
+  df <- df[, to_keep]
+  
+  # df$watch_off_dur_shut <- as.numeric(df$watch_off_dur_shut)
+  # df$watch_dnd_mode_min <- as.numeric(df$watch_dnd_mode_min)
+  
+  df <- df %>% group_by(participant_ID) %>% mutate(actual_days = row_number())
+  
+  # max_day <- max(df$actual_days)
+  # split_val <- max_day/2
+  
+  
+  keep_only <- c("actual_days", "phone_off_min", "phone_dnd_mode_min")
+  
+  df <- df[, keep_only]
+  
+  df <- reshape2::melt(df, id.var='actual_days')
+  
+  df$value <- as.numeric(df$value)
+  
+  max_min <- max(df$value, na.rm = TRUE)
+  split_val <- max_min/2
+
+  # print(max_min)
+  # print(split_val)
+  
+  line_plot <- ggplot(data=df, aes(x=actual_days, y=value, color = variable)) +
+    # geom_line(size = 1) +
+    # geom_point() +
+    theme_bw() +
+    # ylim(0,300) +
+    # scale_y_continuous(limits = c(0, 300, breaks = seq(0, 300, by = 150))) +
+    scale_x_continuous(limits = c(0, 106), breaks = seq(0, 106, by = 53)) +
+    # scale_x_discrete(labels = c("Home", "School", "Work", "Friend", "Unlabeled", "Transit", "Other")) +
+    # theme(axis.text.x = element_text(angle = 45, margin = margin(t = 5))) +
+    # stat_summary(geom="ribbon", fun.data=mean_cl_normal, conf.int=0.95, fill="lightblue", alpha = 0.5) +
+    stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
+               width = 0.1, size = 1) +
+    # scale_colour_manual("", values = c(Compliance = "blue", Completion = "red")) +
+    # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
+    labs(x = "", y = "Minutes per day", color = "Phone is") +
+    scale_color_manual(labels = c("off", "in DnD"), values = c("red", "blue")) +
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), axis.title.x=element_blank(), legend.text = element_text(size = 15)) +
+    ggtitle("EMA data loss sources") +
+    theme(
+    legend.position = c(0.25, 0.85)
+    # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
+    #   color = "#D9D9D9",
+    #   size = 15)
+  ) +
+    guides(colour = guide_legend(nrow = 1))
+  
+  return(line_plot)
+  
+}
+
+
+```
+
+Save plots to objects
+```{r}
+uema_data_loss <- plot_data_loss_sources_watch(time_df)
+ema_data_loss <- plot_data_loss_sources_phone(burst_df)
+
+uema_data_loss_arranged <- ggarrange(uema_data_loss, uema_num, ncol = 1, nrow = 2)
+ema_data_loss_arranged <- ggarrange(ema_data_loss, ema_num, ncol = 1, nrow = 2)
+
+
+```
+
+Save the files
+```{r}
+
+ggsave(
+    "uema_loss_12m.png",
+    plot = uema_data_loss_arranged,
+    device = "png",
+    path = "D:/uema_ema_comparison_CHI/revised_thesis_plots",
+    scale = 1,
+    height = 6,
+    width = 5,
+    units = "in",
+    limitsize = FALSE,
+    dpi = 300
+)
+
+
+ggsave(
+    "ema_loss_12m.png",
+    plot = ema_data_loss_arranged,
+    device = "png",
+    path = "D:/uema_ema_comparison_CHI/revised_thesis_plots",
+    scale = 1,
+    height = 6,
+    width = 5,
+    units = "in",
+    limitsize = FALSE,
+    dpi = 300
+)
+
+
+```
+
+Get the last 6 months
+```{r}
+
+time_last_6m_df <- return_last_burst(time_df, 130)
+
+```
+
+Plot boxplot by participant
+```{r}
+
+plot_watch_battery_box_plot <- function(df){
+  keep <- c("participant_ID", "watch_off_dur_shut")
+  df <- df[, keep]
+  df$watch_off_dur_shut <- as.numeric(df$watch_off_dur_shut)
+  
+  df$participant_ID <- gsub("@timestudy_com", "" ,df$participant_ID)
+  
+  box_comp_plot<- ggplot(data = df, aes(x=participant_ID, y=watch_off_dur_shut)) + 
+  geom_boxplot() + 
+  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax= ..y.., ymin = ..y..),
+               width = 0.75, linetype="dashed") +
+  ylim(0, 1440) +
+  # ggtitle("Compliance, completion, and validation rate") +
+    xlab("") +
+    ylab("Minutes per day") +
+    # theme(axis.title = element_text(size = 50), axis.text = element_text(size = 20))
+    # theme(axis.title.y = element_text(size = 50), axis.text.y = element_text(size = 20)) +
+    # theme(title = element_text(size = 30)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), legend.text = element_text(size=15)) +
+    stat_summary(fun.y = mean, geom = "errorbar", aes(ymax= ..y.., ymin = ..y.., color = "Mean"),
+               width = 0.75, linetype="solid") +
+    stat_summary(fun.y = median, geom = "errorbar", aes(ymax= ..y.., ymin = ..y.., color = "Median"),
+               width = 0.75, linetype="solid") +
+     scale_colour_manual("", values = c(Median = "blue", Mean = "red")) +
+  # theme(
+  #   legend.position = c(0.65, 0.12)
+  #   # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
+  #   #   color = "#D9D9D9",
+  #   #   size = 15)
+  # ) +
+  #   guides(colour = guide_legend(nrow = 1)) +
+    ggtitle("Watch off")
+  
+  return(box_comp_plot)
+  
+}
+
+```
+
+Plot for dnd duration
+```{r}
+
+plot_watch_dnd_box_plot <- function(df){
+  keep <- c("participant_ID", "watch_dnd_mode_min")
+  df <- df[, keep]
+  df$watch_dnd_mode_min <- as.numeric(df$watch_dnd_mode_min)
+  
+  df$participant_ID <- gsub("@timestudy_com", "" ,df$participant_ID)
+  
+  box_comp_plot<- ggplot(data = df, aes(x=participant_ID, y=watch_dnd_mode_min)) + 
+  geom_boxplot() + 
+  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax= ..y.., ymin = ..y..),
+               width = 0.75, linetype="dashed") +
+  ylim(0, 1440) +
+  # ggtitle("Compliance, completion, and validation rate") +
+    xlab("") +
+    ylab("Minutes per day") +
+    # theme(axis.title = element_text(size = 50), axis.text = element_text(size = 20))
+    # theme(axis.title.y = element_text(size = 50), axis.text.y = element_text(size = 20)) +
+    # theme(title = element_text(size = 30)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), legend.text = element_text(size=15)) +
+    stat_summary(fun.y = mean, geom = "errorbar", aes(ymax= ..y.., ymin = ..y.., color = "Mean"),
+               width = 0.75, linetype="solid") +
+    stat_summary(fun.y = median, geom = "errorbar", aes(ymax= ..y.., ymin = ..y.., color = "Median"),
+               width = 0.75, linetype="solid") +
+     scale_colour_manual("", values = c(Median = "blue", Mean = "red")) +
+  # theme(
+  #   legend.position = c(0.65, 0.12)
+  #   # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
+  #   #   color = "#D9D9D9",
+  #   #   size = 15)
+  # ) +
+  #   guides(colour = guide_legend(nrow = 1)) +
+    ggtitle("Watch DnD")
+  
+  return(box_comp_plot)
+  
+}
+
+```
+
+Get the plotting objects
+```{r}
+
+uema_battery_loss <- plot_watch_battery_box_plot(time_last_6m_df)
+uema_dnd_loss <- plot_watch_dnd_box_plot(time_last_6m_df)
+
+```
+
+Save the plots
+```{r}
+
+ggsave(
+    "uema_battery_loss_12m.png",
+    plot = uema_battery_loss,
+    device = "png",
+    path = "D:/uema_ema_comparison_CHI/revised_thesis_plots",
+    scale = 1,
+    height = 5,
+    width = 10,
+    units = "in",
+    limitsize = FALSE,
+    dpi = 300
+)
+
+
+ggsave(
+    "ema_dnd_loss_12m.png",
+    plot = uema_dnd_loss,
+    device = "png",
+    path = "D:/uema_ema_comparison_CHI/revised_thesis_plots",
+    scale = 1,
+    height = 5,
+    width = 10,
+    units = "in",
+    limitsize = FALSE,
+    dpi = 300
+)
+
+
+```
+
+## Get test ID subsets
+```{r}
+
+get_id_subset <- function(df, pid){
+  df <- subset(df, df$participant_ID == pid)
+  return(df)
+}
+
+```
+
+Apply and get plots
+```{r}
+
+id_select = "resupplyclappingyahoo@timestudy_com"
+
+id_subset <- get_id_subset(time_df, id_select)
+
+id_plot <- plot_data_loss_sources_watch(id_subset)
 
 ```
 
