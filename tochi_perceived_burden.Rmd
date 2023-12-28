@@ -12,7 +12,7 @@ library(psych)
 library(reshape2)
 library(dplyr)
 library(lsr)
-
+library(car)
 
 ```
 
@@ -23,35 +23,200 @@ perceived_burden_data <- read.csv(file = "/Users/adityaponnada/Downloads/time_st
 
 ```
 
+## Split into 6m and exit survey dfs
 
+First, get the column names and then split column names into two
+```{r}
 
+all_col_names <- names(perceived_burden_data)
 
-
-
-
-
-
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+Get column names for 6 months survey
+```{r}
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+common_cols <- c(1:3)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+phone_6m_cols <- c(c(4: 20), c(23, 24))
+watch_6m_cols <- c(c(28: 44), c(47, 48))
 
-```{r cars}
-summary(cars)
+phone_12m_cols <- c(c(53: 69), c(72, 73))
+watch_12m_cols <- c(c(83: 99), c(102, 103))
+
+
+
 ```
 
-## Including Plots
+#### Note that the status 3, 4, and 5 are: withdrawn, unenrolled, and completed statuses. This can be mapped to 0, 1, 2 for convinience
 
-You can also embed plots, for example:
+```{r}
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+id_df <- perceived_burden_data[, common_cols]
+colnames(id_df) <- c("index", "participant_ID", "participant_status_code")
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+
+id_df$status_type[id_df$participant_status_code == 3] = 'Withdrawn'
+id_df$status_type[id_df$participant_status_code == 4] = 'Unenrolled'
+id_df$status_type[id_df$participant_status_code == 5] = 'Completed'
+
+
+```
+
+```{r}
+burden_6m_df <- perceived_burden_data[, c(phone_6m_cols, watch_6m_cols)]
+burden_12m_df <- perceived_burden_data[, c(phone_12m_cols, watch_12m_cols)]
+```
+
+```{r}
+
+burden_6m_df$phone_total_burden <- rowSums(burden_6m_df[, c(1:19)])
+burden_6m_df$watch_total_burden <- rowSums(burden_6m_df[, c(20:38)])
+
+```
+
+```{r}
+
+burden_12m_df$phone_total_burden <- rowSums(burden_12m_df[, c(1:19)])
+burden_12m_df$watch_total_burden <- rowSums(burden_12m_df[, c(20:38)])
+
+```
+
+
+```{r}
+burden_6m_df <- cbind(id_df, burden_6m_df)
+burden_12m_df <- cbind(id_df, burden_12m_df)
+```
+
+
+```{r}
+
+burden_6m_no_na_df <- burden_6m_df[(!is.na(burden_6m_df$phone_total_burden)) & (!is.na(burden_6m_df$watch_total_burden)), ]
+
+```
+
+```{r}
+
+burden_12m_no_na_df <- burden_12m_df[(!is.na(burden_12m_df$phone_total_burden)) & (!is.na(burden_12m_df$watch_total_burden)), ]
+
+```
+
+```{r}
+
+burden_12m_no_na_df <- burden_12m_no_na_df[burden_12m_no_na_df$status_type == "Completed", ]
+
+```
+
+```{r}
+
+describe(burden_6m_no_na_df$phone_total_burden)
+describe(burden_6m_no_na_df$watch_total_burden)
+
+```
+```{r}
+
+describe(burden_12m_no_na_df$phone_total_burden)
+describe(burden_12m_no_na_df$watch_total_burden)
+
+```
+
+```{r}
+
+summary(burden_12m_no_na_df$phone_total_burden)
+summary(burden_12m_no_na_df$watch_total_burden)
+
+```
+
+
+```{r}
+
+describeBy(burden_6m_no_na_df$phone_total_burden,burden_6m_no_na_df$status_type)
+describeBy(burden_6m_no_na_df$watch_total_burden,burden_6m_no_na_df$status_type)
+
+```
+
+```{r}
+
+t.test(burden_12m_no_na_df$phone_total_burden, burden_12m_no_na_df$watch_total_burden, paired = TRUE, alternative = "two.sided")
+
+
+```
+```{r}
+
+long_12m_burden_df <- melt(burden_12m_no_na_df, id.vars='participant_ID', measure.vars=c('phone_total_burden', 'watch_total_burden')) 
+
+```
+
+```{r}
+
+ggplot(long_12m_burden_df) + geom_boxplot(aes(x=variable, y=value))
+
+```
+```{r}
+cohensD(value~variable, data = long_12m_burden_df) 
+```
+
+
+```{r}
+
+long_6m_burden_df <- melt(burden_6m_no_na_df, id.vars='participant_ID', measure.vars=c('phone_total_burden', 'watch_total_burden'))
+
+```
+
+```{r}
+
+long_6m_burden_df <- merge(x = long_6m_burden_df, y = burden_6m_no_na_df[ , c("participant_ID", "status_type")], by = "participant_ID", all.x=TRUE)
+
+```
+
+```{r}
+
+res.aov2 <- aov(value ~ variable + status_type + variable:status_type, data = long_6m_burden_df)
+# summary(res.aov2)
+Anova(res.aov2, type = "III")
+
+```
+```{r}
+etaSquared(res.aov2)
+
+```
+
+
+```{r}
+
+TukeyHSD(res.aov2, which = "status_type")
+
+```
+```{r}
+
+bp <- ggplot(long_6m_burden_df, aes(x=variable, y=value, group=variable)) + 
+  geom_boxplot(aes(fill=variable))
+# bp
+
+bp <- bp + facet_grid(. ~ status_type)
+
+```
+
+```{r}
+ggplot(long_6m_burden_df, 
+       aes(x = status_type, y = value, colour = variable, group = variable)) +
+  geom_line()
+```
+
+```{r}
+
+interaction.plot(x.factor = long_6m_burden_df$status_type, #x-axis variable
+                 trace.factor = long_6m_burden_df$variable, #variable for lines
+                 response = long_6m_burden_df$value, #y-axis variable
+                 fun = median, #metric to plot
+                 ylab = "Perceived Burden",
+                 xlab = "Participant Status",
+                 col = c("red", "blue"),
+                 lty = 1, #line type
+                 lwd = 2, #line width
+                 trace.label = "EMA Type")
+
+```
+
