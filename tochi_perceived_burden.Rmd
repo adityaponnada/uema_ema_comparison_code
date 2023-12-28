@@ -210,7 +210,7 @@ ggplot(long_6m_burden_df,
 interaction.plot(x.factor = long_6m_burden_df$status_type, #x-axis variable
                  trace.factor = long_6m_burden_df$variable, #variable for lines
                  response = long_6m_burden_df$value, #y-axis variable
-                 fun = median, #metric to plot
+                 fun = mean, #metric to plot
                  ylab = "Perceived Burden",
                  xlab = "Participant Status",
                  col = c("red", "blue"),
