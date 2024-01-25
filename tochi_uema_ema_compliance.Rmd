@@ -913,4 +913,46 @@ uema_arranged <- ggarrange(uema_com_plot, uema_wdr_plot, uema_unen_plot, uema_nu
 ema_arranged <- ggarrange(ema_com_plot, ema_wdr_plot, ema_unen_plot, ema_num_com, ema_num_wdr, ema_num_unen, ncol = 3, nrow = 2)
 
 ```
+## Model with interaction effect (IGNORE)
+```{r}
+
+completion_model_full <- function(df){
+  # subset_df <- subset(df, df$STATUS == status_type)
+  subset_df = df
+  mod <- glmer(cbind(TOTAL_COMPLETED, PMPD_MISSED) ~ TYPE_NUM + (1 | P_ID) + (1 | STATUS), family = "binomial", data=subset_df)
+  print(summary(mod))
+  
+  se <- sqrt(diag(vcov(mod)))
+# table of estimates with 95% CI
+(tab <- cbind(Est = fixef(mod), LL = fixef(mod) - 1.96 * se, UL = fixef(mod) + 1.96 *
+    se))
+
+print(exp(tab))
+  
+}
+
+```
+
+Testing the model (IGNORE)
+```{r}
+completion_model_full(clean_time_burst_df)
+
+```
+
+
+
+### Get status count per participant in the final dataset
+```{r}
+
+per_participant_df <- clean_time_burst_df %>%
+  group_by(P_ID) %>%
+  filter(row_number()==1)
+
+```
+
+```{r}
+
+table(per_participant_df$STATUS)
+
+```
 
