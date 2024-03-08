@@ -215,12 +215,17 @@ plot(tukey_result)
 ```{r}
 
 bp <- ggplot(long_6m_burden_df, aes(x=variable, y=value, group=variable)) + 
-  geom_boxplot(aes(fill=variable))
+  geom_boxplot() + labs(y="Perceived Burden")
 # bp
 
-bp <- bp + facet_grid(. ~ status_type)
+bp <- bp + facet_grid(. ~ status_type) + theme_bw()  + theme(text= element_text(size=15), axis.text.x= element_text(size=15), axis.title.x = element_blank())
 
 ```
+
+p <- ggplot(plot_df_long, aes(variable, value,fill=TYPE)) + geom_boxplot() + facet_wrap(~STATUS) + theme_bw() +
+  theme(text = element_text(size=20),
+        axis.text.x = element_text(size=15))
+
 
 ```{r}
 ggplot(long_6m_burden_df, 
