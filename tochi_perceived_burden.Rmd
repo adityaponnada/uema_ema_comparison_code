@@ -258,4 +258,63 @@ legend("topleft", legend=c("Phone", "Watch"),
        title="Type")
 
 ```
+```{r}
+
+completed_burden_12m <- burden_12m_no_na_df[c("participant_ID", "phone_total_burden", "watch_total_burden")]
+completed_burden_6m <- burden_6m_no_na_df[c("participant_ID", "phone_total_burden", "watch_total_burden")]
+
+names(completed_burden_12m) <- c("participant_ID", "phone_total_burden_12m", "watch_total_burden_12m")
+names(completed_burden_6m) <- c("participant_ID", "phone_total_burden_6m", "watch_total_burden_6m")
+
+
+```
+
+```{r}
+
+burden_diff_df <- merge(completed_burden_12m, completed_burden_6m, by="participant_ID")
+
+```
+
+```{r}
+
+burden_diff_df$phone_burden_diff <- burden_diff_df$phone_total_burden_12m - burden_diff_df$phone_total_burden_6m
+burden_diff_df$watch_burden_diff <- burden_diff_df$watch_total_burden_12m - burden_diff_df$watch_total_burden_6m
+
+```
+
+```{r}
+
+hist(burden_diff_df$phone_burden_diff)
+
+```
+
+```{r}
+
+hist(burden_diff_df$watch_burden_diff)
+
+```
+```{r}
+
+test_diff_df <- melt(burden_diff_df[c("participant_ID", "phone_burden_diff", "watch_burden_diff")], id.vars=c("participant_ID"))
+
+```
+
+```{r}
+
+ggplot(test_diff_df, aes(x = value, fill = variable)) +
+  geom_histogram(position = "identity", alpha = 0.4, bins = 50) +
+  labs(x="Change in perceived burden", y="Number of users") +
+  theme_bw()
+  
+
+```
+
+```{r}
+
+ggplot(test_diff_df, aes(x = variable, y = value)) + 
+  geom_boxplot() +
+  labs(x="", y="Change in perceived burden") +
+  theme_bw()
+
+```
 
