@@ -686,6 +686,15 @@ p <- ggplot(plot_df_long, aes(variable, value,fill=TYPE)) + geom_boxplot() + fac
 ```
 
 ```{r}
+
+p <- ggplot(plot_df_long, aes(variable, value,fill=TYPE)) + geom_boxplot() + facet_wrap(~STATUS) + theme_bw() +
+  theme(text = element_text(size=20),
+        axis.text.x = element_text(size=15))
+
+```
+
+
+```{r}
 p
 ```
 

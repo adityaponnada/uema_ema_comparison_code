@@ -237,9 +237,20 @@ interaction.plot(x.factor = long_6m_burden_df$status_type, #x-axis variable
                  ylab = "Perceived Burden",
                  xlab = "Participant Status",
                  col = c("red", "blue"),
-                 lty = 1, #line type
+                 type = "b",
+                 pch=c(16, 17),
+                 lty = c(1, 2), #line type
                  lwd = 2, #line width
-                 trace.label = "EMA Type")
+                 xtick=TRUE,
+                 main="Perceived burden at 6-months in study",
+                 legend=FALSE)
+par(xpd=TRUE)
+legend("topleft", legend=c("Phone", "Watch"), 
+       lty = c(1,2), 
+       lwd=2, 
+       col=c("red", "blue"), 
+       pch = c(16, 17), 
+       title="Type")
 
 ```
 
