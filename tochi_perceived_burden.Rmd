@@ -317,4 +317,9 @@ ggplot(test_diff_df, aes(x = variable, y = value)) +
   theme_bw()
 
 ```
+```{r}
+
+t.test(burden_diff_df$phone_burden_diff, burden_diff_df$watch_burden_diff, paired = TRUE, alternative = "two.sided")
+
+```
 
