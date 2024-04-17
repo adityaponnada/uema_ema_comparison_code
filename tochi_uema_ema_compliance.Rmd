@@ -928,7 +928,7 @@ ema_arranged <- ggarrange(ema_com_plot, ema_wdr_plot, ema_unen_plot, ema_num_com
 completion_model_full <- function(df){
   # subset_df <- subset(df, df$STATUS == status_type)
   subset_df = df
-  mod <- glmer(cbind(TOTAL_COMPLETED, PMPD_MISSED) ~ TYPE_NUM + (1 | P_ID) + (1 | STATUS), family = "binomial", data=subset_df)
+  mod <- glmer(cbind(TOTAL_COMPLETED, PMPD_MISSED) ~ TYPE_NUM + TYPE_NUM*STATUS + (1 | P_ID) + (1 | STATUS), family = "binomial", data=subset_df, control = glmerControl(optimizer ="Nelder_Mead"))
   print(summary(mod))
   
   se <- sqrt(diag(vcov(mod)))
