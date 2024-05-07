@@ -151,6 +151,32 @@ daily_report_subset$current_sleep_timestamp <- as.POSIXct(daily_report_subset$cu
 
 ```
 
+
+## Create a function to filter out user names with less than six months of data in total
+We are only looking at the users who have completed at least six months in the study. Thus, we will discard any user who has not completed six months yet
+```{r}
+
+keep_six_months_completed <- function(df, num_months){
+  num_days = num_months * 30
+  # count each 'name', assign result to an object 'tt'
+  tt <- table(df$participant_ID)
+  # subset data frame by a logical vector
+  # 'TRUE' rows are kept, 'FALSE' rows are removed.
+  # assign the result to a data frame with a new name
+  df2 <- subset(df, df$participant_ID %in% names(tt[tt >= num_days]))
+  
+  return(df2)
+}
+
+
+```
+
+```{r}
+daily_report_subset <- keep_six_months_completed(daily_report_subset, 6)
+```
+
+
+
 ## Remove days with awkward sleep duration due to error
 Check summary first
 ```{r}
@@ -922,6 +948,19 @@ uema_arranged <- ggarrange(uema_com_plot, uema_wdr_plot, uema_unen_plot, uema_nu
 ema_arranged <- ggarrange(ema_com_plot, ema_wdr_plot, ema_unen_plot, ema_num_com, ema_num_wdr, ema_num_unen, ncol = 3, nrow = 2)
 
 ```
+```{r}
+
+uema_arranged
+
+```
+
+```{r}
+
+ema_arranged
+
+```
+
+
 ## Model with interaction effect (Completion rate)
 ```{r}
 
@@ -986,6 +1025,13 @@ per_participant_df <- clean_time_burst_df %>%
 ```{r}
 
 table(per_participant_df$STATUS)
+
+```
+
+## Write the status type vs IDs to a file
+```{r}
+df_to_write = per_participant_df[, c('P_ID', 'STATUS')]
+write.csv(df_to_write, "/Users/adityaponnada/Downloads/participant_6m_status.csv")
 
 ```
 
