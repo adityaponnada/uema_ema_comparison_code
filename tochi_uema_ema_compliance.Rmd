@@ -1028,6 +1028,198 @@ table(per_participant_df$STATUS)
 
 ```
 
+
+## Summary compliance and completion rate functions
+
+### First, for overall EMA types
+```{r}
+
+## Compliance rate
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST', ]$TOTAL_EXPECTED)
+
+```
+
+```{r}
+
+## Completion rate
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST', ]$TOTAL_PROMPTED)
+
+```
+
+```{r}
+
+## Compliance rate
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME', ]$TOTAL_EXPECTED)
+
+```
+
+```{r}
+
+## Completion rate
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME', ]$TOTAL_PROMPTED)
+
+```
+
+## Overall rates by group for uEMA
+```{r}
+
+## Completion rates
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Completed', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Completed', ]$TOTAL_PROMPTED)
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Withdrew', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Withdrew', ]$TOTAL_PROMPTED)
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Unenrolled', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Unenrolled', ]$TOTAL_PROMPTED)
+
+## Compliance rates
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Completed', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Completed', ]$TOTAL_EXPECTED)
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Withdrew', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Withdrew', ]$TOTAL_EXPECTED)
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Unenrolled', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'TIME' & clean_time_burst_df$STATUS == 'Unenrolled', ]$TOTAL_EXPECTED)
+
+```
+
+```{r}
+
+## Completion rates
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Completed', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Completed', ]$TOTAL_PROMPTED)
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Withdrew', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Withdrew', ]$TOTAL_PROMPTED)
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Unenrolled', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Unenrolled', ]$TOTAL_PROMPTED)
+
+## Compliance rates
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Completed', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Completed', ]$TOTAL_EXPECTED)
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Withdrew', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Withdrew', ]$TOTAL_EXPECTED)
+
+sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Unenrolled', ]$TOTAL_COMPLETED)/sum(clean_time_burst_df[clean_time_burst_df$TYPE == 'BURST' & clean_time_burst_df$STATUS == 'Unenrolled', ]$TOTAL_EXPECTED)
+
+```
+## Compliance and completion summary at the participant level
+
+## Create participant level data frames
+This data frame is to get a wide form for each participant
+
+First, we start with the time_df for uema
+
+```{r}
+
+time_keep_cols <- c("participant_ID", "uema_completed_num", "uema_prompted_num", "uema_expected_num", "uema_validation_perc")
+
+selected_TIME_df <- time_df[, time_keep_cols]
+
+```
+
+Now create a function to return the completely aggregated df
+```{r}
+
+aggregate_time_df <- function(df){
+  
+  df1 <- df[, c("participant_ID", "uema_completed_num", "uema_prompted_num", "uema_expected_num")]
+  num_time_days_df <- df %>% count(participant_ID)
+  df2 <- aggregate(.~participant_ID, df1, sum)
+  df3 <- aggregate(uema_validation_perc~participant_ID, df, mean, na.rm=TRUE, na.action=na.pass)
+  df2$num_time_days <- num_time_days_df$n
+  df2 <- join(df2, df3)
+  return(df2)
+  
+}
+
+```
+
+Use the function to get the aggregate df
+
+```{r}
+
+time_pid_df <- aggregate_time_df(selected_TIME_df)
+
+```
+
+Add compliance and completion rate columns
+
+```{r}
+
+time_pid_df$uema_completion_rate <- time_pid_df$uema_completed_num/time_pid_df$uema_prompted_num
+time_pid_df$uema_compliance_rate <- time_pid_df$uema_completed_num/time_pid_df$uema_expected_num
+
+```
+
+Second, we do the same with burst EMA
+```{r}
+
+burst_keep_cols <- c("participant_ID", "burst_ema_completed_num", "burst_ema_original_prompted_num", "burst_ema_expected_num")
+
+selected_BURST_df <- burst_df[, burst_keep_cols]
+
+```
+
+Now create a function to return the completely aggregated df
+```{r}
+
+selected_BURST_df$burst_ema_completed_num <- as.numeric(selected_BURST_df$burst_ema_completed_num)
+selected_BURST_df$burst_ema_original_prompted_num <- as.numeric(selected_BURST_df$burst_ema_original_prompted_num)
+selected_BURST_df$burst_ema_expected_num <- as.numeric(selected_BURST_df$burst_ema_expected_num)
+
+aggregate_burst_df <- function(df){
+  
+  df1 <- df[, c("participant_ID", "burst_ema_completed_num", "burst_ema_original_prompted_num", "burst_ema_expected_num")]
+  num_burst_days_df <- df %>% count(participant_ID)
+  df2 <- aggregate(.~participant_ID, df1, sum)
+  df2$num_burst_days <- num_burst_days_df$n
+  return(df2)
+  
+}
+
+```
+
+Use the function to get the aggregate df
+
+```{r}
+
+burst_pid_df <- aggregate_burst_df(selected_BURST_df)
+
+```
+
+Add compliance and completion rate columns
+```{r}
+
+burst_pid_df$burst_completion_rate <- burst_pid_df$burst_ema_completed_num/burst_pid_df$burst_ema_original_prompted_num
+burst_pid_df$burst_compliance_rate <- burst_pid_df$burst_ema_completed_num/burst_pid_df$burst_ema_expected_num
+
+```
+
+## Join with participant status
+```{r}
+
+time_pid_df <- merge(time_pid_df, participant_status_df, by = 'participant_ID')
+burst_pid_df <- merge(burst_pid_df, participant_status_df, by = 'participant_ID')
+
+```
+
+
+## Get average compliance and completion rates at the participant level
+```{r}
+describeBy(time_pid_df$uema_completion_rate, group = time_pid_df$participant_status)
+describeBy(time_pid_df$uema_compliance_rate, group = time_pid_df$participant_status)
+
+```
+
+```{r}
+describeBy(burst_pid_df$burst_completion_rate, group = burst_pid_df$participant_status)
+describeBy(burst_pid_df$burst_compliance_rate, group = burst_pid_df$participant_status)
+```
+
+
+
 ## Write the status type vs IDs to a file
 ```{r}
 df_to_write = per_participant_df[, c('P_ID', 'STATUS')]
