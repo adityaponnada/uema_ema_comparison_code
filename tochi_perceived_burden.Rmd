@@ -151,9 +151,10 @@ long_12m_burden_df <- melt(burden_12m_no_na_df, id.vars='participant_ID', measur
 
 ```{r}
 
-ggplot(long_12m_burden_df) + geom_boxplot(aes(x=variable, y=value))
+burden_12m_plot <- ggplot(long_12m_burden_df) + geom_boxplot(aes(x=variable, y=value)) + theme_bw()
 
 ```
+
 ```{r}
 cohensD(value~variable, data = long_12m_burden_df) 
 ```

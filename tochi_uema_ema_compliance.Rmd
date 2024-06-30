@@ -477,8 +477,8 @@ boxplot(burst_status_df$n ~ burst_status_df$participant_status, main = "EMA days
 
 ```{r}
 
-describeBy(burst_df$burst_ema_compliance_rate, group = burst_df$participant_status)
-describeBy(burst_df$burst_ema_completion_rate, group = burst_df$participant_status)
+describeBy(burst_df$burst_ema_compliance_rate, group = burst_df$participant_status, mat=TRUE, digits=4)
+describeBy(burst_df$burst_ema_completion_rate, group = burst_df$participant_status, mat=TRUE, digits=4)
 
 ```
 
