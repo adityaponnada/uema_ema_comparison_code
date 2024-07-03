@@ -697,7 +697,7 @@ plot_df$COMPLIANCE <- plot_df$TOTAL_COMPLETED/plot_df$TOTAL_EXPECTED
 
 ```
 
-TODO: Change the plot to violin plot
+Plot the response rare distribution ...
 ```{r out.width = '40%'}
 
 plot_df <- plot_df[, c("TYPE", "STATUS", "COMPLIANCE", "COMPLETION")]
@@ -706,17 +706,32 @@ plot_df_long <- melt(plot_df, id.vars=c("TYPE","STATUS"))
 
 plot_df_long <- subset(plot_df_long, plot_df_long$STATUS != '0')
 
+plot_df_long$METHOD[plot_df_long$TYPE == 'BURST'] <- 'EMA'
+plot_df_long$METHOD[plot_df_long$TYPE == 'TIME'] <- updated_string <- gsub(" ", "", paste('\U00B5','EMA'))
+
 #then plot
-p <- ggplot(plot_df_long, aes(variable, value,fill=TYPE)) + geom_boxplot() + facet_wrap(~STATUS)
+p <- ggplot(plot_df_long, aes(variable, value,fill=TYPE)) + geom_violin() + facet_wrap(~STATUS)
 
 
 ```
 
+
+
+
 ```{r}
 
-p <- ggplot(plot_df_long, aes(variable, value,fill=TYPE)) + geom_boxplot() + facet_wrap(~STATUS) + theme_bw() +
-  theme(text = element_text(size=20),
-        axis.text.x = element_text(size=15))
+p <- ggplot(plot_df_long, aes(variable, value,fill=METHOD)) + geom_violin() + facet_wrap(~STATUS) +
+  scale_fill_manual('Method', values = c('coral', 'cadetblue3')) +
+  theme_bw() +
+  ggtitle("Participants who ...") +
+  xlab('') +
+  ylab('Daily response rate') +
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(size=10), title = element_text(size=15)) +
+  stat_summary(fun.data=mean_sdl, fun.args = list(mult = 1),
+               geom="pointrange", color="black",
+               shape = 18, size = 0.75,
+               position = position_dodge(width = 0.9))
 
 ```
 
