@@ -223,10 +223,11 @@ bp <- bp + facet_grid(. ~ status_type) + theme_bw()  + theme(text= element_text(
 
 ```
 
-p <- ggplot(plot_df_long, aes(variable, value,fill=TYPE)) + geom_boxplot() + facet_wrap(~STATUS) + theme_bw() +
-  theme(text = element_text(size=20),
-        axis.text.x = element_text(size=15))
-
+```{r}
+# p <- ggplot(plot_df_long, aes(variable, value,fill=TYPE)) + geom_boxplot() + facet_wrap(~STATUS) + theme_bw() +
+#   theme(text = element_text(size=20),
+#         axis.text.x = element_text(size=15))
+```
 
 ```{r}
 ggplot(long_6m_burden_df, 
@@ -242,23 +243,26 @@ interaction.plot(x.factor = long_6m_burden_df$status_type, #x-axis variable
                  fun = mean, #metric to plot
                  ylab = "Perceived Burden",
                  xlab = "Participant Status",
-                 col = c("red", "blue"),
+                 col = c("coral", "cadetblue3"),
                  type = "b",
                  pch=c(16, 17),
-                 lty = c(1, 2), #line type
-                 lwd = 2, #line width
+                 lty = c(1, 1), #line type
+                 lwd = 3, #line width
                  xtick=TRUE,
-                 main="Perceived burden at 6-months in study",
+                 main="Perceived burden after 6-months in study",
                  legend=FALSE)
 par(xpd=TRUE)
-legend("topleft", legend=c("Phone", "Watch"), 
+legend("topleft", legend=c("EMA", gsub(" ", "", paste('\U00B5','EMA'))), 
        lty = c(1,2), 
        lwd=2, 
-       col=c("red", "blue"), 
+       col=c("coral", "cadetblue3"), 
        pch = c(16, 17), 
-       title="Type")
+       title="Method")
 
 ```
+
+
+
 ```{r}
 
 completed_burden_12m <- burden_12m_no_na_df[c("participant_ID", "phone_total_burden", "watch_total_burden")]
