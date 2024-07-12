@@ -286,6 +286,20 @@ legend("topleft", legend=c("EMA", gsub(" ", "", paste('\U00B5','EMA'))),
 ```
 
 
+```{r}
+long_6m_burden_df %>% 
+  group_by(status_type, variable) %>% 
+  summarise(burden_groups = mean(value)) -> df_test
+
+
+
+  ggplot(df_test) +
+  aes(x = status_type, y = burden_groups, color = variable) +
+  geom_line(aes(group = variable)) +
+  geom_point()
+```
+
+
 
 
 ```{r}
