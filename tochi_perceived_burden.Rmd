@@ -265,7 +265,7 @@ interaction.plot(x.factor = long_6m_burden_df$status_type, #x-axis variable
                  trace.factor = long_6m_burden_df$variable, #variable for lines
                  response = long_6m_burden_df$value, #y-axis variable
                  fun = mean, #metric to plot
-                 ylab = "Perceived Burden",
+                 ylab = "Perceived Burden after 6 months",
                  xlab = "Participant Status",
                  col = c("coral", "cadetblue3"),
                  type = "b",
@@ -273,8 +273,8 @@ interaction.plot(x.factor = long_6m_burden_df$status_type, #x-axis variable
                  lty = c(1, 1), #line type
                  lwd = 3, #line width
                  xtick=TRUE,
-                 main="Perceived burden after 6-months in study",
-                 legend=FALSE)
+                 legend=FALSE,
+                 ylim=c(19, 95))
 par(xpd=TRUE)
 legend("topleft", legend=c("EMA", gsub(" ", "", paste('\U00B5','EMA'))), 
        lty = c(1,2), 
@@ -283,6 +283,15 @@ legend("topleft", legend=c("EMA", gsub(" ", "", paste('\U00B5','EMA'))),
        pch = c(16, 17), 
        title="Method")
 
+```
+
+
+
+
+```{r}
+ggplot(long_6m_burden_df) +
+  aes(x = status_type, y = value, color = variable) +
+  geom_line(aes(group = variable))
 ```
 
 
