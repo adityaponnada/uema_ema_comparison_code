@@ -300,9 +300,9 @@ names(df_test) <- c("STATUS", "METHOD", "BURDEN")
     scale_fill_manual('Method', values = c('coral', 'cadetblue3')) +
   geom_point() +
     theme_bw() +
-  ggtitle("Only completed participants") +
+  ggtitle("For participants who ...") +
   xlab('') +
-  ylab('Perceived burden at 12 months') +
+  ylab('Perceived burden at 6 months') +
   ylim(19, 95) +
   theme(text = element_text(size=15),
         axis.text.x = element_text(size=15), title = element_text(size=15), legend.position='none')
