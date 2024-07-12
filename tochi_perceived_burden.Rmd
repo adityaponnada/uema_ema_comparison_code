@@ -291,12 +291,36 @@ long_6m_burden_df %>%
   group_by(status_type, variable) %>% 
   summarise(burden_groups = mean(value)) -> df_test
 
+names(df_test) <- c("STATUS", "METHOD", "BURDEN")
 
 
   ggplot(df_test) +
-  aes(x = status_type, y = burden_groups, color = variable) +
-  geom_line(aes(group = variable)) +
-  geom_point()
+  aes(x = STATUS, y = BURDEN, color = METHOD) +
+  geom_line(aes(group = METHOD)) +
+    scale_fill_manual('Method', values = c('coral', 'cadetblue3')) +
+  geom_point() +
+    theme_bw() +
+  ggtitle("Only completed participants") +
+  xlab('') +
+  ylab('Perceived burden at 12 months') +
+  ylim(19, 95) +
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(size=15), title = element_text(size=15), legend.position='none')
+  
+  
+  # burden_12m_plot <- ggplot(plot_df_12m, aes(METHOD, value,fill=METHOD)) + geom_violin() +
+  # scale_fill_manual('Method', values = c('coral', 'cadetblue3')) +
+  # theme_bw() +
+  # ggtitle("Only completed participants") +
+  # xlab('') +
+  # ylab('Perceived burden at 12 months') +
+  # ylim(19, 95) +
+  # theme(text = element_text(size=15),
+  #       axis.text.x = element_text(size=15), title = element_text(size=15), legend.position='none') +
+  # stat_summary(fun.data=mean_sdl, fun.args = list(mult = 1),
+  #              geom="pointrange", color="black",
+  #              shape = 18, size = 0.75,
+  #              position = position_dodge(width = 0.9))
 ```
 
 
