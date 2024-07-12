@@ -150,10 +150,34 @@ long_12m_burden_df <- melt(burden_12m_no_na_df, id.vars='participant_ID', measur
 ```
 
 ```{r}
+plot_df_12m <- long_12m_burden_df
+plot_df_12m$METHOD[plot_df_12m$variable == 'phone_total_burden'] <- "EMA"
+plot_df_12m$METHOD[plot_df_12m$variable == 'watch_total_burden'] <- gsub(" ", "", paste('\U00B5','EMA'))
+```
 
-burden_12m_plot <- ggplot(long_12m_burden_df) + geom_boxplot(aes(x=variable, y=value)) + theme_bw()
+
+```{r}
+
+# burden_12m_plot <- ggplot(long_12m_burden_df) + geom_boxplot(aes(x=variable, y=value)) + theme_bw()
 
 ```
+
+```{r}
+burden_12m_plot <- ggplot(plot_df_12m, aes(METHOD, value,fill=METHOD)) + geom_violin() +
+  scale_fill_manual('Method', values = c('coral', 'cadetblue3')) +
+  theme_bw() +
+  ggtitle("Only completed participants") +
+  xlab('') +
+  ylab('Perceived burden at 12 months') +
+  ylim(19, 95) +
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(size=15), title = element_text(size=15), legend.position='none') +
+  stat_summary(fun.data=mean_sdl, fun.args = list(mult = 1),
+               geom="pointrange", color="black",
+               shape = 18, size = 0.75,
+               position = position_dodge(width = 0.9))
+```
+
 
 ```{r}
 cohensD(value~variable, data = long_12m_burden_df) 
