@@ -723,11 +723,10 @@ p <- ggplot(plot_df_long, aes(variable, value,fill=TYPE)) + geom_violin() + face
 p <- ggplot(plot_df_long, aes(variable, value,fill=METHOD)) + geom_violin() + facet_wrap(~STATUS) +
   scale_fill_manual('Method', values = c('coral', 'cadetblue3')) +
   theme_bw() +
-  ggtitle("Participants who ...") +
   xlab('') +
-  ylab('Daily response rate') +
+  ylab('Daily response rates for ...') +
   theme(text = element_text(size=15),
-        axis.text.x = element_text(size=10), title = element_text(size=15)) +
+        axis.text.x = element_text(size=10), title = element_text(size=15), legend.position = "top", legend.justification.top = "right") +
   stat_summary(fun.data=mean_sdl, fun.args = list(mult = 1),
                geom="pointrange", color="black",
                shape = 18, size = 0.75,
