@@ -792,8 +792,9 @@ plot_seasonality_ema <- function(df, status_type){
     # scale_x_discrete(labels = c("Home", "School", "Work", "Friend", "Unlabeled", "Transit", "Other")) +
     # theme(axis.text.x = element_text(angle = 45, margin = margin(t = 5))) +
     # stat_summary(geom="ribbon", fun.data=mean_cl_normal, conf.int=0.95, fill="lightblue", alpha = 0.5) +
-    stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
-               width = 0.1, size = 1) +
+    # stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
+    #            width = 0.1, size = 1) +
+    geom_smooth() +
     # scale_colour_manual("", values = c(Compliance = "blue", Completion = "red")) +
     # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
     labs(x = "Days in study", y = "Rate", color = "Rate type") +
@@ -834,8 +835,9 @@ plot_seasonality_uema <- function(df, status_type){
     # scale_x_discrete(labels = c("Home", "School", "Work", "Friend", "Unlabeled", "Transit", "Other")) +
     # theme(axis.text.x = element_text(angle = 45, margin = margin(t = 5))) +
     # stat_summary(geom="ribbon", fun.data=mean_cl_normal, conf.int=0.95, fill="lightblue", alpha = 0.5) +
-    stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
-               width = 0.1, size = 1) +
+    # stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
+    #            width = 0.1, size = 1) +
+    geom_smooth() +
     # scale_colour_manual("", values = c(Compliance = "blue", Completion = "red")) +
     # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
     labs(x = "Days in study", y = "Rate", color = "Rate type") +
@@ -903,7 +905,8 @@ plot_num_part_days <- function(df, type, status_type){
   # agg_df$max_expo_day <- as.numeric(agg_df$max_expo_day)
   # 
   line_plot <- ggplot(data=agg_df, aes(x=Days, y=Num_Ps)) +
-    geom_line(size = 1) +
+    # geom_line(size = 1) +
+    geom_smooth(aes(x=Days, y=Num_Ps), color='black') + 
     # geom_point() +
     theme_bw() +
     scale_y_continuous(limits = c(0, 150), breaks = seq(0, 150, by = 50)) +
