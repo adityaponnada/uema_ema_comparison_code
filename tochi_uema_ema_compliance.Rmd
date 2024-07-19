@@ -799,7 +799,7 @@ plot_seasonality_ema <- function(df, status_type){
     labs(x = "Days in study", y = "Rate", color = "Rate type") +
     scale_color_manual(labels = c("Compliance rate", "Completion rate"), values = c("red", "blue")) +
     theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), axis.title.x=element_blank(), legend.text = element_text(size = 15)) +
-    ggtitle(paste0("EMA ", status_type)) +
+    ggtitle(status_type) +
     theme(
     legend.position = c(0.25, 0.15)
     # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
@@ -841,7 +841,7 @@ plot_seasonality_uema <- function(df, status_type){
     labs(x = "Days in study", y = "Rate", color = "Rate type") +
     scale_color_manual(labels = c("Compliance rate", "Completion rate"), values = c("red", "blue")) +
     theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), axis.title.x=element_blank(), legend.text = element_text(size = 15)) +
-    ggtitle(paste0("µEMA ", status_type)) +
+    ggtitle(status_type) +
     theme(
     legend.position = c(0.25, 0.15)
     # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
@@ -915,7 +915,8 @@ plot_num_part_days <- function(df, type, status_type){
     #            width = 0.1, size = 1) +
     # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
     labs(x = paste0(day_type, " days"), y = "No. participants") +
-    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15)) + ggtitle(paste0(day_type, " ", status_type))
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15)) 
+  # + ggtitle(paste0(day_type, " ", status_type))
    
   
    # ylim(0, 1) +
