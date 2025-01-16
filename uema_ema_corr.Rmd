@@ -1,0 +1,16 @@
+---
+title: "uema_ema_corr"
+output: html_document
+date: "2025-01-16"
+---
+
+## Import library
+```{r}
+
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+library(psych)
+
+```
+

@@ -726,7 +726,7 @@ p <- ggplot(plot_df_long, aes(variable, value,fill=METHOD)) + geom_violin() + fa
   xlab('') +
   ylab('Daily response rates for ...') +
   theme(text = element_text(size=15),
-        axis.text.x = element_text(size=10), title = element_text(size=15), legend.position = "top", legend.justification.top = "right") +
+        axis.text.x = element_text(size=10), title = element_text(size=15), legend.position = "top", legend.justification.top = "left") +
   stat_summary(fun.data=mean_sdl, fun.args = list(mult = 1),
                geom="pointrange", color="black",
                shape = 18, size = 0.75,

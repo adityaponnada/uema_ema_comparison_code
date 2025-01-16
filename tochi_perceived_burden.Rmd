@@ -58,7 +58,7 @@ colnames(id_df) <- c("index", "participant_ID", "participant_status_code")
 
 ```{r}
 
-id_df$status_type[id_df$participant_status_code == 3] = 'Withdrawn'
+id_df$status_type[id_df$participant_status_code == 3] = 'Withdrew'
 id_df$status_type[id_df$participant_status_code == 4] = 'Unenrolled'
 id_df$status_type[id_df$participant_status_code == 5] = 'Completed'
 
@@ -260,6 +260,48 @@ bp <- bp + facet_grid(. ~ status_type) + theme_bw()  + theme(text= element_text(
 #   theme(text = element_text(size=20),
 #         axis.text.x = element_text(size=15))
 ```
+
+```{r}
+
+p <- ggplot(long_6m_burden_df, aes(variable, value,fill=variable)) + geom_violin() + facet_wrap(~status_type) +
+  scale_fill_manual('Method', values = c('coral', 'cadetblue3')) +
+  theme_bw() +
+  xlab('') +
+  ylab('Daily response rates for ...') +
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(size=10), title = element_text(size=15), legend.position = "top", legend.justification.top = "left") +
+  stat_summary(fun.data=mean_sdl, fun.args = list(mult = 1),
+               geom="pointrange", color="black",
+               shape = 18, size = 0.75,
+               position = position_dodge(width = 0.9))
+
+
+```
+
+
+```{r}
+plot_df_6m <- long_6m_burden_df
+plot_df_6m$METHOD[plot_df_6m$variable == 'phone_total_burden'] <- "EMA"
+plot_df_6m$METHOD[plot_df_6m$variable == 'watch_total_burden'] <- gsub(" ", "", paste('\U00B5','EMA'))
+```
+
+
+```{r}
+test_vp <- ggplot(plot_df_6m, aes(x=status_type, y=value, fill=METHOD)) + 
+    geom_violin() +
+  scale_fill_manual("Method", values = c('coral', 'cadetblue3')) +
+  theme_bw() +
+  xlab('') +
+  ylab('Perceived burden at 6 months') +
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(size=15), title = element_text(size=15), legend.position = "top", legend.justification.top = "left") +
+  stat_summary(fun.data=mean_sdl, fun.args = list(mult = 1),
+               geom="pointrange", color="black",
+               shape = 18, size = 0.75,
+               position = position_dodge(width = 0.9))
+```
+
+
 
 ```{r}
 ggplot(long_6m_burden_df, 
