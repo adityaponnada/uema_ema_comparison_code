@@ -11,6 +11,30 @@ library(dplyr)
 library(reshape2)
 library(ggplot2)
 library(psych)
+library(readr)
+library(purrr)
+
+```
+
+## Read EMA data
+```{r}
+
+ema_df <- read.csv("/Users/adityaponnada/Downloads/time_study_data/EMA_data.csv", sep = ",", header = TRUE)
+
+```
+
+## Read uEMA data
+```{r}
+# Set the path to folder
+folder_path <- "/Users/adityaponnada/Downloads/time_study_data/uema_data"
+
+# List all files matching the pattern B_*.csv
+files <- list.files(path = folder_path, pattern = "watch_promptresponse_.*@timestudy_com\\.csv$", full.names = TRUE)
+
+# Read and combine all CSV files
+uema_df <- files %>%
+  map_df(read_csv)
+
 
 ```
 
