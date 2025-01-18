@@ -13,7 +13,7 @@ library(ggplot2)
 library(psych)
 library(readr)
 library(purrr)
-
+library(tidyr)
 ```
 
 ## Read EMA data
@@ -37,4 +37,84 @@ uema_df <- files %>%
 
 
 ```
+
+## Subset data frames
+```{r}
+
+keep_uema <- c("Participant_ID", "Question_X_ID", "Answer_Status", "Question_X_Text", "Question_X_Answer_Text")
+
+uema_df <- uema_df[, keep_uema]
+
+```
+
+### Check distributions
+```{r}
+
+table(uema_df$Answer_Status)
+
+table(uema_df$Question_X_ID)
+
+```
+
+### Check participant distribution
+```{r}
+
+n_distinct(uema_df$Participant_ID)
+
+```
+
+## Keep only completed responses
+```{r}
+
+uema_df <- subset(uema_df, Answer_Status %in% c("Completed", "CompletedThenDismissed", "PartiallyCompleted"))
+
+```
+
+### Reformat question ID
+```{r}
+
+uema_df$Question_X_ID <- sub("_.*", "", uema_df$Question_X_ID)
+
+
+```
+
+### Keep only relevant questions
+```{r}
+
+uema_questions <- c("tense", "stress", "sad", "routine", "relax", "nervous", "happy", "frust", "focus", "fatigue", "control")
+
+uema_df <- subset(uema_df, Question_X_ID %in% uema_questions)
+
+```
+
+### Score responses
+```{r}
+
+uema_df <- uema_df %>%
+  mutate(Answer_Score = case_when(
+    Question_X_Answer_Text == "Yes" ~ 3,
+    Question_X_Answer_Text == "Sort of" ~ 2,
+    Question_X_Answer_Text == "No" ~ 1,
+    TRUE ~ NA_real_  # This handles any other values not specified above
+  ))
+
+```
+
+### Remove remaining NOT_ANS
+```{r}
+
+uema_df <- subset(uema_df, !is.na(uema_df$Answer_Score))
+
+```
+
+```{r}
+
+uema_wide_df <- uema_df %>%
+  group_by(Participant_ID, Question_X_ID) %>%
+  summarise(Answer_Score_Var = var(Answer_Score, na.rm = TRUE)) %>%
+  pivot_wider(names_from = Question_X_ID, values_from = Answer_Score_Var)
+
+```
+
+
 
