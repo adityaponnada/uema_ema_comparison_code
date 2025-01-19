@@ -150,3 +150,40 @@ ema_wide_df <- ema_df %>%
 
 ```
 
+## Plot uema and ema data in grids
+```{r}
+
+uema_plot_df <- uema_wide_df %>% 
+  pivot_longer(cols = -Participant_ID, names_to = "variable", values_to = "value")
+
+uema_var_plot <- ggplot(uema_plot_df, aes(x = value)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  facet_wrap(~ variable, scales = "free", ncol = 4) +
+  theme_minimal() +
+  xlim(0, 4) +
+  labs(title = "Histograms of All uEMA construct variances",
+       x = "Value",
+       y = "Count")
+
+```
+### For EMA
+```{r}
+
+
+
+ema_plot_df <- ema_wide_df %>% 
+  pivot_longer(cols = -Participant_ID, names_to = "variable", values_to = "value")
+
+ema_var_plot <- ggplot(ema_plot_df, aes(x = value)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  facet_wrap(~ variable, scales = "free", ncol = 4) +
+  theme_minimal() +
+  xlim(0,4) +
+  labs(title = "Histograms of All EMA construct variances",
+       x = "Value",
+       y = "Count")
+
+```
+
+
+
