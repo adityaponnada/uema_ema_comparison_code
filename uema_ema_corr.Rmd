@@ -107,6 +107,8 @@ uema_df <- subset(uema_df, !is.na(uema_df$Answer_Score))
 
 ```
 
+
+### Compute variance for each question
 ```{r}
 
 uema_wide_df <- uema_df %>%
@@ -116,5 +118,35 @@ uema_wide_df <- uema_df %>%
 
 ```
 
+## EMA data prep - filter the relevant columns
+```{r}
 
+ema_df <- subset(ema_df, ema_df$Answer_Status %in% c("Completed", "PartiallyCompleted"))
+
+```
+
+### keep only selected columns
+```{r}
+
+keep_ema <- c("participant_id", "Answer_Status", "x01_sad", "x02_happy", "x03_fatigued", "x05_relaxed", "x06_tense", "x07_stressed"  , "x08_frustrated", "x09_nervous", "x10_focused", "x11_control", "x14_routine")
+
+ema_df <- ema_df[, keep_ema]
+
+```
+
+### Rename columns
+```{r}
+
+colnames(ema_df) <- c("Participant_ID", "Answer_Status", "sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")
+
+```
+
+### Compute variance for each question
+```{r}
+
+ema_wide_df <- ema_df %>%
+  group_by(Participant_ID) %>%
+  summarise(across(c(sad, happy, fatigue, relax, tense, stress, frust, nervous, focus, control, routine), var, na.rm = TRUE))
+
+```
 
