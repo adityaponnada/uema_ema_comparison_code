@@ -206,5 +206,29 @@ ema_3p_df <- ema_df %>%
 
 ```
 
+### Compute variance for each question
+```{r}
 
+ema_3p_wide_df <- ema_3p_df %>%
+  group_by(Participant_ID) %>%
+  summarise(across(c(sad, happy, fatigue, relax, tense, stress, frust, nervous, focus, control, routine), var, na.rm = TRUE))
+
+```
+
+### Plot ema 3p variance distribution
+```{r}
+
+ema_3p_plot_df <- ema_3p_wide_df %>% 
+  pivot_longer(cols = -Participant_ID, names_to = "variable", values_to = "value")
+
+ema_3p_var_plot <- ggplot(ema_3p_plot_df, aes(x = value)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  facet_wrap(~ variable, scales = "free", ncol = 4) +
+  theme_minimal() +
+  xlim(0,4) +
+  labs(title = "Histograms of All EMA construct variances (3 point)",
+       x = "Value",
+       y = "Count")
+
+```
 
