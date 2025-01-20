@@ -232,3 +232,119 @@ ema_3p_var_plot <- ggplot(ema_3p_plot_df, aes(x = value)) +
 
 ```
 
+## Rename columns for uEMA and EMA
+We will rename each of the column name except for participant_ID to have a prefix of either uema_ or ema_
+```{r}
+
+column_rename <- function(df, prefix) {
+  colnames(df)[-1] <- paste0(prefix, "_", colnames(df)[-1])
+  return(df)
+}
+
+```
+
+Now we apply the function
+```{r}
+
+uema_wide_df <- column_rename(uema_wide_df, "uema")
+
+```
+
+Now apply to EMA data
+```{r}
+
+
+ema_3p_wide_df <- column_rename(ema_3p_wide_df, "ema")
+
+```
+
+## Read the participant status data
+```{r}
+
+participant_status_dat_df <- read.csv("/Users/adityaponnada/Downloads/time_study_data/participant_status_tracking_v2.csv", sep = ",", header = TRUE)
+
+participant_status_dat_df$Participant_ID <- paste0(participant_status_dat_df$Visualizer.ID, "@timestudy_com")
+
+```
+
+Get the daily report participant list from daily_report_subset
+```{r}
+
+final_participant_list <- unique(daily_report_subset$participant_ID)
+
+```
+
+### Filter the participant status data
+```{r}
+
+participant_status_dat_df <- subset(participant_status_dat_df, participant_status_dat_df$Participant_ID %in% final_participant_list)
+
+```
+
+### Only keep the Participant ID and the Participant Status column in the data frame
+```{r}
+
+participant_status_dat_df <- participant_status_dat_df[, c("Participant_ID", "Participant.Status")]
+
+```
+
+First, add @timestudy_com to participant ID in ema_3p_wide_df
+```{r}
+ema_3p_wide_df$Participant_ID <- paste0(ema_3p_wide_df$Participant_ID, "@timestudy_com")
+```
+
+
+### Filter uEMA and EMA data based on final participant list
+```{r}
+
+uema_wide_df <- subset(uema_wide_df, uema_wide_df$Participant_ID %in% final_participant_list)
+
+ema_3p_wide_df <- subset(ema_3p_wide_df, ema_3p_wide_df$Participant_ID %in% final_participant_list)
+
+```
+
+### Find out the users who are in uEMA but not in ema data
+```{r}
+
+uema_not_in_ema <- setdiff(uema_wide_df$Participant_ID, ema_3p_wide_df$Participant_ID)
+
+```
+
+### Merge uEMA and EMA data by Participant ID.
+But we will only keep the common participant_IDs in uema and EMA
+```{r}
+
+combined_df <- merge(uema_wide_df, ema_3p_wide_df, by = "Participant_ID")
+
+```
+
+Next, we also add the participant status column to this dataframe. We also ensure that the new column is the second column
+```{r}
+
+combined_df1 <- merge(combined_df, participant_status_dat_df, by = "Participant_ID")
+
+
+```
+
+### Next we compute the pearson correlation between uEMA and EMA data for each construct
+We then save it in a dataframe with the construct name and the correlation value and p-value
+```{r}
+
+correlation_df <- data.frame()
+correr <- function(df, construct) {
+  cor_val <- cor.test(df[, c(paste0("uema_", construct))], df[, c(paste0("ema_", construct))], method="pearson")
+  return(c(cor_val$estimate, cor_val$p.value))
+}
+
+```
+
+Test the correlation for all the constructs and print them one by one.
+```{r}
+
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  cor_val <- correr(combined_df1, construct)
+  correlation_df <- rbind(correlation_df, data.frame(construct = construct, correlation = cor_val))
+}
+
+```
+
