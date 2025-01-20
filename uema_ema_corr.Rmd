@@ -185,5 +185,26 @@ ema_var_plot <- ggplot(ema_plot_df, aes(x = value)) +
 
 ```
 
+## EMA score mapped to uEMA
+First, get the list of columns
+```{r}
+ema_col_list <- c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")
+```
+
+Then apply the function
+
+```{r}
+
+ema_3p_df <- ema_df %>%
+  mutate(across(ema_col_list, 
+                ~ case_when(
+                  . %in% c(4, 5) ~ 3,
+                  . %in% c(2, 3) ~ 2,
+                  . == 1 ~ 1,
+                  TRUE ~ NA_real_
+                )))
+
+```
+
 
 
