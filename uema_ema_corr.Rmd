@@ -14,6 +14,8 @@ library(psych)
 library(readr)
 library(purrr)
 library(tidyr)
+library(ggrepel)
+library(cowplot)
 ```
 
 ## Read EMA data
@@ -345,6 +347,58 @@ for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frus
   cor_val <- correr(combined_df1, construct)
   correlation_df <- rbind(correlation_df, data.frame(construct = construct, correlation = cor_val[[1]], p_value = cor_val[[2]]))
 }
+
+```
+
+## Plot individual construct correlations
+Here, we will plot each constructs scatterplots with the correlation value and p-value displayed on the plot.
+```{r}
+
+correlation_plot <- ggplot(correlation_df, aes(x = correlation, y = p_value, label = construct)) +
+  geom_point() +
+  geom_text_repel() +
+  labs(title = "Correlation between uEMA and EMA constructs",
+       x = "Correlation",
+       y = "P-value")
+
+```
+
+In the next plot, we will use the combined_df1 dataframe to plot the scatterplots for each construct. For example, we will plot the scatterplot for sad construct where the x-axis is the uema_sad and the y-axis is the ema_sad. We will also display the correlation value and p-value on the plot.
+```{r}
+
+construct_plot <- function(df, construct) {
+  plot_df <- df %>% select(paste0("uema_", construct), paste0("ema_", construct))
+  plot_df <- plot_df[complete.cases(plot_df), ]
+  cor_val <- cor.test(plot_df[,1], plot_df[,2], method="pearson")
+  plot <- ggplot(plot_df, aes(x = plot_df[,1], y = plot_df[,2])) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE) +
+    geom_text(x = 1, y = 1, label = paste("Correlation:", round(cor_val$estimate, 2), "P-value:", round(cor_val$p.value, 2))) +
+    labs(title = paste("Scatterplot for", construct),
+         x = paste("uema_", construct),
+         y = paste("ema_", construct))
+  return(plot)
+}
+
+```
+
+
+Next, we will create a grid of all the 11 constructs and plot them side by side. We will create a grid of 3x4 plots.
+```{r}
+
+construct_plots <- list()
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  construct_plots[[construct]] <- construct_plot(combined_df1, construct)
+}
+
+
+```
+
+Now we will arrange them in a 3X4 grid
+```{r}
+
+construct_plots_grid <- plot_grid(plotlist = construct_plots, ncol = 4, nrow = 3)
+
 
 ```
 
