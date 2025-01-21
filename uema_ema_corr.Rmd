@@ -373,10 +373,14 @@ construct_plot <- function(df, construct) {
   plot <- ggplot(plot_df, aes(x = plot_df[,1], y = plot_df[,2])) +
     geom_point() +
     geom_smooth(method = "lm", se = FALSE) +
-    geom_text(x = 1, y = 1, label = paste("Correlation:", round(cor_val$estimate, 2), "P-value:", round(cor_val$p.value, 2))) +
-    labs(title = paste("Scatterplot for", construct),
-         x = paste("uema_", construct),
-         y = paste("ema_", construct))
+    # geom_text(x = 1, y = 1, label = paste("Correlation:", round(cor_val$estimate, 2), "P-value:", round(cor_val$p.value, 2))) +
+    labs(title = paste0(construct, " (r=", round(cor_val$estimate, 2), ")"),
+         x = paste0("\u03BC", "EMA Variance"),
+         y = "EMA Variance") +
+    xlim(0, 1) +
+    ylim(0, 1) +
+    theme_bw() +
+    theme(panel.background = element_rect(fill = "white"))
   return(plot)
 }
 
@@ -397,7 +401,7 @@ for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frus
 Now we will arrange them in a 3X4 grid
 ```{r}
 
-construct_plots_grid <- plot_grid(plotlist = construct_plots, ncol = 4, nrow = 3)
+construct_plots_grid <- plot_grid(plotlist = construct_plots, ncol = 4, nrow = 3, rel_heights = c(1, 1, 1))
 
 
 ```
