@@ -343,7 +343,7 @@ Test the correlation for all the constructs and print them one by one.
 
 for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
   cor_val <- correr(combined_df1, construct)
-  correlation_df <- rbind(correlation_df, data.frame(construct = construct, correlation = cor_val))
+  correlation_df <- rbind(correlation_df, data.frame(construct = construct, correlation = cor_val[[1]], p_value = cor_val[[2]]))
 }
 
 ```
