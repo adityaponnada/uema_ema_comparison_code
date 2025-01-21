@@ -406,3 +406,46 @@ construct_plots_grid <- plot_grid(plotlist = construct_plots, ncol = 4, nrow = 3
 
 ```
 
+## Split the data into two groups based on the participant status
+```{r}
+
+completed_participants <- subset(combined_df1, combined_df1$Participant.Status == "Completed")
+withdrawn_participants <- subset(combined_df1, combined_df1$Participant.Status == "Withdrew")
+unenrolled_participants <- subset(combined_df1, combined_df1$Participant.Status == "Unenrolled")
+
+```
+
+### Compute correlation for each group across uEMA and EMA constructs
+first for completed participants
+```{r}
+
+correlation_df_completed <- data.frame()
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  cor_val <- correr(completed_participants, construct)
+  correlation_df_completed <- rbind(correlation_df_completed, data.frame(construct = construct, correlation = cor_val[[1]], p_value = cor_val[[2]]))
+}
+
+```
+
+Then, for unenrolled participants
+```{r}
+
+correlation_df_unenrolled <- data.frame()
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  cor_val <- correr(unenrolled_participants, construct)
+  correlation_df_unenrolled <- rbind(correlation_df_unenrolled, data.frame(construct = construct, correlation = cor_val[[1]], p_value = cor_val[[2]]))
+}
+
+```
+
+Finally, for withdrew participants
+```{r}
+
+correlation_df_withdrew <- data.frame()
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  cor_val <- correr(withdrawn_participants, construct)
+  correlation_df_withdrew <- rbind(correlation_df_withdrew, data.frame(construct = construct, correlation = cor_val[[1]], p_value = cor_val[[2]]))
+}
+
+```
+
