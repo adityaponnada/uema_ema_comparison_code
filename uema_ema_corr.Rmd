@@ -16,6 +16,7 @@ library(purrr)
 library(tidyr)
 library(ggrepel)
 library(cowplot)
+library(GGally)
 ```
 
 ## Read EMA data
@@ -446,6 +447,31 @@ for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frus
   cor_val <- correr(withdrawn_participants, construct)
   correlation_df_withdrew <- rbind(correlation_df_withdrew, data.frame(construct = construct, correlation = cor_val[[1]], p_value = cor_val[[2]]))
 }
+
+```
+
+## Create a correlation matrix plot for all uEMA and EMA constructs
+For this, we will use combined_df1 dataframe and plot the correlation matrix for all the constructs. Then we will create a heatmap of the correlation matrix.
+```{r}
+
+
+# Create the correlation plot
+corr_matrix <- cor(combined_df[, -1])  # Exclude the ID column
+
+# Melt the correlation matrix
+melted_corr <- melt(corr_matrix)
+
+# Create the heatmap
+corr_plot_pairwise <- ggplot(data = melted_corr, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  coord_fixed() +
+  labs(x = "", y = "") +
+  geom_text(aes(label = round(value, 2)), size = 2)
 
 ```
 
