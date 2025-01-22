@@ -456,7 +456,7 @@ For this, we will use combined_df1 dataframe and plot the correlation matrix for
 
 
 # Create the correlation plot
-corr_matrix <- cor(combined_df[, -1])  # Exclude the ID column
+corr_matrix <- cor(combined_df[, -1], use = "complete.obs", method = "pearson")  # Exclude the ID column
 
 # Melt the correlation matrix
 melted_corr <- melt(corr_matrix)
@@ -464,7 +464,7 @@ melted_corr <- melt(corr_matrix)
 # Create the heatmap
 corr_plot_pairwise <- ggplot(data = melted_corr, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile() +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+  scale_fill_gradient2(low = "blue", high = "red", 
                        midpoint = 0, limit = c(-1,1), space = "Lab", 
                        name="Pearson\nCorrelation") +
   theme_bw() +
