@@ -509,3 +509,49 @@ for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frus
 
 ```
 
+
+### Color code participants in construct_plot based on Participant_ID
+We will create a new construct_plot called construct_plot_coded where each point in the scatterplot will be color-coded based on the Participant_ID. We will not add the legend for color codes.
+```{r}
+
+
+construct_plot_coded_list <- list()
+construct_plot_coded <- function(df, construct) {
+  plot_df <- df %>% select(paste0("uema_", construct), paste0("ema_", construct), Participant_ID)
+  plot_df <- plot_df[complete.cases(plot_df), ]
+  cor_val <- cor.test(plot_df[,1], plot_df[,2], method="pearson")
+  plot <- ggplot(plot_df, aes(x = plot_df[,1], y = plot_df[,2], color = Participant_ID)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE) +
+    labs(title = paste0(construct, " (r=", round(cor_val$estimate, 2), ")"),
+         x = paste0("\u03BC", "EMA Variance"),
+         y = "EMA Variance") +
+    xlim(0, 1) +
+    ylim(0, 1) +
+    theme_bw() +
+    theme(panel.background = element_rect(fill = "white")) +
+    theme(legend.position = "none")
+  return(plot)
+}
+
+```
+
+
+Now, we will add all the plots into the list for each construct
+```{r}
+
+construct_plot_coded_list <- list()
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  construct_plot_coded_list[[construct]] <- construct_plot_coded(combined_df1, construct)
+}
+
+
+```
+
+Now we will arrange them in a 3X4 grid using plot_grid
+```{r}
+
+construct_plots_coded_grid <- plot_grid(plotlist = construct_plot_coded_list, ncol = 4, nrow = 3, rel_heights = c(1, 1, 1))
+
+```
+
