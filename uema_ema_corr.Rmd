@@ -597,4 +597,53 @@ Now let's display them in a 3X4 grid using plot_grid
 construct_plots_coded_status_grid <- plot_grid(plotlist = construct_plot_coded_status_list, ncol = 4, nrow = 3, rel_heights = c(1, 1, 1))
 
 ```
+## Residual analysis using combined_df1
+We will create a dataframe where each row has Participant_ID, and 11 columns for all the constructs. Each cell contains the residual value for that construct for that participant. We will use combined_df1 for this analysis.
+
+```{r}
+
+participant_ids <- combined_df1$Participant_ID
+
+# Initialize residual_df with Participant_ID
+residual_df <- data.frame(Participant_ID = participant_ids)
+
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  formula <- as.formula(paste0("ema_", construct, " ~ uema_", construct))
+  lm_model <- lm(formula, data = combined_df1, na.action = na.exclude)
+  residuals <- residuals(lm_model)
+  
+  # Ensure the residuals vector matches the number of rows in residual_df
+  if (length(residuals) < nrow(residual_df)) {
+    residuals <- c(residuals, rep(NA, nrow(residual_df) - length(residuals)))
+  }
+  
+  # Add the residuals as a new column
+  residual_df[[paste0("residual_", construct)]] <- residuals
+}
+```
+
+### Plot residuals for each participant
+Now we will plot residuals for each participant for each construct. For this, we will create a heatmap where the y axis is participant_ID and x-axis is the construct. The cell color will represent the residual value. The Participant_IDs will range from 1 to 174. This is so that the plot is clearly displayed.
+```{r}
+
+
+# Melt the residual_df
+melted_residual <- melt(residual_df, id.vars = "Participant_ID")
+
+# Change participant ID to number starting from 1
+melted_residual$Participant_ID <- as.numeric(factor(melted_residual$Participant_ID))
+
+# Create the heatmap
+heatmap <- ggplot(melted_residual, aes(x = variable, y = Participant_ID, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  labs(title = "Heatmap of Variables by Participant ID",
+       fill = "Value")
+
+
+```
 
