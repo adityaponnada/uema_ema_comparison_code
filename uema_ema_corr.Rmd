@@ -475,3 +475,37 @@ corr_plot_pairwise <- ggplot(data = melted_corr, aes(x = Var1, y = Var2, fill = 
 
 ```
 
+## Get correlations and scatter plots for EMA with the original 5p scale as in ema_wide_df
+First, we will rename the ema_wide_df columns to have a prefix of ema_5p
+```{r}
+
+ema_wide_df <- column_rename(ema_wide_df, "ema")
+
+```
+
+Next, we will add @timestudy_com to the participant ID in ema_wide_df
+```{r}
+
+ema_wide_df$Participant_ID <- paste0(ema_wide_df$Participant_ID, "@timestudy_com")
+
+```
+
+
+Next, we will merge ema_wide and uema_wide dataframes by Participant ID
+```{r}
+
+combined_df2 <- merge(uema_wide_df, ema_wide_df, by = "Participant_ID")
+
+```
+
+Next, we will compute the correlation between uEMA and EMA data for each construct. We will do this by conducting a correlation test using pearson correlation for each construct
+```{r}
+
+correlation_df_5p <- data.frame()
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  cor_val <- correr(combined_df2, construct)
+  correlation_df_5p <- rbind(correlation_df_5p, data.frame(construct = construct, correlation = cor_val[[1]], p_value = cor_val[[2]]))
+}
+
+```
+
