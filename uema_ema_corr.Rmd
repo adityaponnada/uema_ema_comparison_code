@@ -665,3 +665,25 @@ for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frus
 
 ```
 
+## Compute the mean of residual across all the constructs for each participant in the residual_df
+We will compute the mean for each participant and save it in a datafra,me
+```{r}
+
+residual_df$mean_residual <- rowMeans(residual_df[, -1], na.rm = TRUE)
+
+```
+
+## Plot the mean residual for each participant
+We will use ggplot2 to plot a histogram across participants for the mean residual. We will also add a vertical line at 0 to show the mean residual value.
+```{r}
+
+mean_residual_plot <- ggplot(residual_df, aes(x = mean_residual)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  geom_vline(xintercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "Histogram of Mean Residuals",
+       x = "Mean Residual",
+       y = "Count")
+
+```
+
