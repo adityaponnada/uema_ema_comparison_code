@@ -1246,3 +1246,85 @@ write.csv(df_to_write, "/Users/adityaponnada/Downloads/participant_6m_status.csv
 
 ```
 
+## Add covariates to compliance and completion models
+Next, we will test the model by adding demographic variables as covariates to compliance and completion models
+```{r}
+
+## First, we will add the demographic variables to the participant level data frames
+demo_df <- read.csv("/Users/adityaponnada/Downloads/time_study_data/demo_data_v1.csv")
+
+## Only keep age and gender columns
+demo_df <- demo_df[, c('visualizerid', 'age_years_a5db34', 'sexatbirth_eedb91')]
+
+## Rename columns to be more readable
+colnames(demo_df) <- c('P_ID', 'Age', 'Sex')
+
+## Add @timestudy_com to Participant_ID for each row
+demo_df$P_ID <- paste0(demo_df$P_ID, '@timestudy_com')
+
+## Keep only those participants who have been used in the analysis
+demo_df <- subset(demo_df, demo_df$P_ID %in% unique(clean_time_burst_df$P_ID))
+
+```
+
+Next, we combine the clean_time_burst_df with the demo_df at the participant level. But we only keep the age and sex columns from demo_df
+```{r}
+
+time_pid_demo_df <- merge(clean_time_burst_df, demo_df, by = 'P_ID')
+
+```
+
+## Run the logistic regression model by adding age and sex
+First, we will run it for the compliance model as above
+```{r}
+
+compliance_model_demo_full <- function(df){
+  # subset_df <- subset(df, df$STATUS == status_type)
+  subset_df = df
+  mod <- glmer(cbind(TOTAL_COMPLETED, EXPD_MISSED) ~ TYPE_NUM + TYPE_NUM*STATUS + Age + Sex + (1 | P_ID), family = "binomial", data=subset_df, control = glmerControl(optimizer ="Nelder_Mead"))
+  print(summary(mod))
+  
+  se <- sqrt(diag(vcov(mod)))
+# table of estimates with 95% CI
+(tab <- cbind(Est = fixef(mod), LL = fixef(mod) - 1.96 * se, UL = fixef(mod) + 1.96 *
+    se))
+
+print(exp(tab))
+  
+}
+
+```
+
+Now test the model
+```{r}
+
+compliance_model_demo_full(time_pid_demo_df)
+
+```
+Now we do the same thing for completion model
+```{r}
+
+completion_model_demo_full <- function(df){
+  # subset_df <- subset(df, df$STATUS == status_type)
+  subset_df = df
+  mod <- glmer(cbind(TOTAL_COMPLETED, PMPD_MISSED) ~ TYPE_NUM + TYPE_NUM*STATUS + Age + Sex + (1 | P_ID), family = "binomial", data=subset_df, control = glmerControl(optimizer ="Nelder_Mead"))
+  print(summary(mod))
+  
+  se <- sqrt(diag(vcov(mod)))
+# table of estimates with 95% CI
+(tab <- cbind(Est = fixef(mod), LL = fixef(mod) - 1.96 * se, UL = fixef(mod) + 1.96 *
+    se))
+
+print(exp(tab))
+  
+}
+
+```
+
+Now we test this model
+```{r}
+
+completion_model_demo_full(time_pid_demo_df)
+
+```
+
