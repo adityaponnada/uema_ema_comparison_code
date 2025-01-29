@@ -647,3 +647,21 @@ heatmap <- ggplot(melted_residual, aes(x = variable, y = Participant_ID, fill = 
 
 ```
 
+## Summarise residual analysis for combined_df1
+We will create a summary table that shows the mean and standard deviation of residuals for each construct. We will use combined_df1 for this analysis.
+
+```{r}
+
+residual_summary_df <- data.frame()
+
+## Compute residual summary for each construct
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  residuals <- residual_df[[paste0("residual_", construct)]]
+  mean_residual <- mean(residuals, na.rm = TRUE)
+  sd_residual <- sd(residuals, na.rm = TRUE)
+  
+  residual_summary_df <- rbind(residual_summary_df, data.frame(construct = construct, mean_residual = mean_residual, sd_residual = sd_residual))
+}
+
+```
+
