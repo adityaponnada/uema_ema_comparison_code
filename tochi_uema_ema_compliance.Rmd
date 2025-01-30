@@ -1327,4 +1327,11 @@ Now we test this model
 completion_model_demo_full(time_pid_demo_df)
 
 ```
+## Summarize uema validation perc
+We use time_df for this analysis
+```{r}
+
+describeBy(time_df$uema_validation_perc, group = time_df$participant_status, mat=TRUE, digits=4)
+
+```
 
