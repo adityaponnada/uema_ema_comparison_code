@@ -696,12 +696,14 @@ residual_df$mean_residual <- rowMeans(residual_df[, -1], na.rm = TRUE)
 ```
 
 ## Plot the mean residual for each participant
-We will use ggplot2 to plot a histogram across participants for the mean residual. We will also add a vertical line at 0 to show the mean residual value.
+We will use ggplot2 to plot a histogram across participants for the mean residual. We will also add a vertical line at 0 to show the mean residual value. We will also add a density curve overlaid on this plot.
 ```{r}
+
 
 mean_residual_plot <- ggplot(residual_df, aes(x = mean_residual)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white") +
   geom_vline(xintercept = 0, color = "red", linetype = "dashed") +
+  geom_density(alpha = 0.2, fill = "blue") +
   theme_minimal() +
   labs(title = "Histogram of Mean Residuals",
        x = "Mean Residual",
