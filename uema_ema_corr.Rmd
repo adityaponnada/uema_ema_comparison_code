@@ -342,6 +342,7 @@ correr <- function(df, construct) {
 ```
 
 Test the correlation for all the constructs and print them one by one.
+THIS IS AN IMPORTANT TABLE TO REPORT
 ```{r}
 
 for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
@@ -364,10 +365,32 @@ correlation_plot <- ggplot(correlation_df, aes(x = correlation, y = p_value, lab
 
 ```
 
+Create a function to rename constructs. This function will take the construct names such as sad, happy, fatigue, etc. and return the full construct names such as "Sadness", "Happiness", "Fatigue", etc.
+```{r}
+
+rename_construct <- function(construct) {
+  construct_names <- c("sad" = "Sadness",
+                       "happy" = "Happiness",
+                       "fatigue" = "Fatigue",
+                       "relax" = "Relaxation",
+                       "tense" = "Tension",
+                       "stress" = "Stress",
+                       "frust" = "Frustration",
+                       "nervous" = "Nervousness",
+                       "focus" = "Focus",
+                       "control" = "Control",
+                       "routine" = "Routine")
+  return(construct_names[[construct]])
+}
+
+```
+
+
 In the next plot, we will use the combined_df1 dataframe to plot the scatterplots for each construct. For example, we will plot the scatterplot for sad construct where the x-axis is the uema_sad and the y-axis is the ema_sad. We will also display the correlation value and p-value on the plot.
 ```{r}
 
 construct_plot <- function(df, construct) {
+  construct_name <- rename_construct(construct)
   plot_df <- df %>% select(paste0("uema_", construct), paste0("ema_", construct))
   plot_df <- plot_df[complete.cases(plot_df), ]
   cor_val <- cor.test(plot_df[,1], plot_df[,2], method="pearson")
@@ -375,7 +398,7 @@ construct_plot <- function(df, construct) {
     geom_point() +
     geom_smooth(method = "lm", se = FALSE) +
     # geom_text(x = 1, y = 1, label = paste("Correlation:", round(cor_val$estimate, 2), "P-value:", round(cor_val$p.value, 2))) +
-    labs(title = paste0(construct, " (r=", round(cor_val$estimate, 2), ")"),
+    labs(title = paste0(construct_name, " (r=", round(cor_val$estimate, 2), ")"),
          x = paste0("\u03BC", "EMA Variance"),
          y = "EMA Variance") +
     xlim(0, 1) +
@@ -395,7 +418,6 @@ construct_plots <- list()
 for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
   construct_plots[[construct]] <- construct_plot(combined_df1, construct)
 }
-
 
 ```
 
