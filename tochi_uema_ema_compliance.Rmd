@@ -304,6 +304,16 @@ time_df$uema_completed_num <- as.numeric(time_df$uema_completed_num)
 
 ```
 
+First, let's assign the day number to each participant based on the sequence. Do this for both time_df and burst_df
+```{r}
+
+time_df <- time_df %>% group_by(participant_ID) %>% mutate(dayno = row_number())
+burst_df <- burst_df %>% group_by(participant_ID) %>% mutate(dayno = row_number())
+
+```
+
+
+
 if there are dates to be filtered because of technical malfunction, include that code here
 ```{r}
 ## Read the missing data file here
@@ -447,13 +457,40 @@ burst_df <- merge(x = burst_df, y = participant_status_df[ , c("participant_ID",
 
 ```
 
+Write a code to get the list of participants from time_df, whose participant status is 'completed' AND the maximum dayno value is 190. First group by participants to get the max day no, then filter by dayno less than 190. The final dataframe should return the participant ID and their maximum day_no value
+```{r}
+
+
+test_data_completed <- time_df %>%
+  group_by(participant_ID) %>%
+  summarise(max_dayno = max(dayno)) %>%
+  filter(max_dayno >= 180 & participant_ID %in% time_df$participant_ID[time_df$participant_status == "Completed"])
+
+```
+
+180 (8-9 months)--> 125, 200 --> 114, 220 (10 months) --> 107 participants. 240 (11 months) --> 76, 260 --> 4
+
+Same for burst_df
+
+```{r}
+
+test_data_completed_burst <- burst_df %>%
+  group_by(participant_ID) %>%
+  summarise(max_dayno = max(dayno)) %>%
+  filter(max_dayno <= 80 & participant_ID %in% burst_df$participant_ID[burst_df$participant_status == "Completed"])
+
+```
+
+**NOTE** in uEMA, 29 participants did not survive after 10 months (i.2., 220 days). That left, ~107 participants who completed. In case of EMA, everyone survived past 12 months.
+
 ## Get the days distribution for time and burst df based on participant status
 
 ```{r}
 
 time_status_df <- time_df[, c("participant_ID", "participant_status")]
 
-time_status_df <- time_status_df %>% count(participant_ID, participant_status)
+
+time_status_df <- time_status_df %>% dplyr::count(participant_ID, participant_status)
 
 
 burst_status_df <- burst_df[, c("participant_ID", "participant_status")]
@@ -905,8 +942,8 @@ plot_num_part_days <- function(df, type, status_type){
   # agg_df$max_expo_day <- as.numeric(agg_df$max_expo_day)
   # 
   line_plot <- ggplot(data=agg_df, aes(x=Days, y=Num_Ps)) +
-    # geom_line(size = 1) +
-    geom_smooth(aes(x=Days, y=Num_Ps), color='black') + 
+    geom_line(size = 1) +
+    # geom_smooth(aes(x=Days, y=Num_Ps), color='black') + 
     # geom_point() +
     theme_bw() +
     scale_y_continuous(limits = c(0, 150), breaks = seq(0, 150, by = 50)) +
@@ -1332,6 +1369,13 @@ We use time_df for this analysis
 ```{r}
 
 describeBy(time_df$uema_validation_perc, group = time_df$participant_status, mat=TRUE, digits=4)
+
+```
+```{r}
+describe(time_df$uema_validation_perc)
+
+mean(time_df$uema_validation_perc, na.rm=TRUE)
+sd(time_df$uema_validation_perc, na.rm=TRUE)
 
 ```
 

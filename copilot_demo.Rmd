@@ -1,0 +1,71 @@
+---
+title: "copilot_demo"
+output: html_document
+date: "2025-03-21"
+---
+
+## Import libraries
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(reshape2)
+library(psych)
+```
+
+## Load data
+
+Load the daily report data
+
+```{r}
+
+copilot_demo_df <- read.csv("/Users/adityaponnada/Downloads/time_study_data/sample.csv", header=TRUE)
+
+```
+
+Next, we will get the names pof all the columns
+```{r}
+colnames(copilot_demo_df)
+```
+
+## Data Exploration
+Let's take a look at different SCREEN_STATUS types in this dataframe. We will print the frequencies of each of the screen status type. 
+```{r}
+
+table(copilot_demo_df$SCREEN_STATUS)
+```
+
+## Date manipulation
+Next, we will create a new column prompt_ema. This column has two levels EMA, NOT_EMA It is EMA if prompt type is EMA_Micro, or else it is NOT_EMA
+```{r}
+copilot_demo_df$prompt_ema <- ifelse(copilot_demo_df$Prompt_Type == "EMA_Micro", "EMA", "NOT_EMA")
+```
+
+Summarize the frequency of prompt_ema column
+```{r}
+table(copilot_demo_df$prompt_ema)
+```
+
+
+## T-test
+Next we will dfo a t test with prompt_ema as independent variable and LAST_USAGE_DURATION as dependent variable
+```{r}
+t.test(LAST_USAGE_DURATION ~ prompt_ema, data = copilot_demo_df)
+```
+
+## Visualization
+Next, we will plot a box-whiskers plot with prompt_ema on x axis and LAST_USAGE_DURATION on y axis. Also we will add a mean line to the boxes.
+```{r}
+
+
+ggplot(copilot_demo_df, aes(x = prompt_ema, y = LAST_USAGE_DURATION)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", size = 3, color = "red") +
+  labs(title = "Boxplot of LAST_USAGE_DURATION by prompt_ema",
+       x = "Prompt Type",
+       y = "Last Usage Duration") +
+  theme_minimal()
+
+```
+
