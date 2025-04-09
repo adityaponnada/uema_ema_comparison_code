@@ -1,0 +1,628 @@
+---
+title: "day_trends_plotting"
+output: html_document
+date: "2025-04-04"
+---
+
+## Import libraries
+```{r}
+library(lubridate)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(psych)
+```
+## Import data
+```{r}
+
+trend_dr_df <- read.csv("/Users/adityaponnada/Downloads/time_study_data/daily_report.csv")
+
+```
+
+
+## Stitch changed ids together
+For some participants the ID was changed. So we merge those rows together
+```{r}
+trend_dr_df$participant_ID[trend_dr_df$participant_ID == "upliftedsulfatedreamboat@timestudy_com"] <- "startlingrevengevillage@timestudy_com"
+
+trend_dr_df <- subset(trend_dr_df, trend_dr_df$participant_ID != "stephen4_internal@timestudy_com")
+trend_dr_df <- subset(trend_dr_df, trend_dr_df$participant_ID != "stephen6_internal@timestudy_com")
+```
+
+
+## Read the watch assignment file
+This file is needed to:
+1. Filter time dates with uEMA that occurred before the official watch training
+2. also filter out the participants that have been unenrolled in the first two bursts before the watch was even assigned
+
+Note: In this file, participant status codes mean:
+
+1=first burst
+2=active
+3= staff unenrolled
+4=participant withdrew
+5=competed
+
+```{r}
+
+participant_status_df <- read.csv(file = "/Users/adityaponnada/Downloads/time_study_data/participant_status_tracking_v2.csv", sep = ",", header = TRUE)
+
+# names(participant_status_df) <- c("record_id", "participant_id", "participant_status", "watch_assign_date", "device_tracking")
+
+
+
+
+names(participant_status_df) <- c("record_id", "participant_id", "participant_status", "consent_date", "date_completed", "date_withdrew", "date_unenrolled", "date_device_mailed", "device_id", "watch_assign_date", "exit_interview_date")
+
+participant_status_df$participant_id <- paste0(participant_status_df$participant_id, "@timestudy_com")
+
+```
+
+
+Remove participants who were never assigned a single watch
+```{r}
+
+no_watch_assigned_df <- subset(participant_status_df, participant_status_df$watch_assign_date == "")
+
+no_watch_users = unique(no_watch_assigned_df$participant_id)
+
+```
+
+Keep a dataframe of watch assigned participants
+```{r}
+
+watch_users_df <- subset(participant_status_df, participant_status_df$watch_assign_date != "")
+
+```
+
+
+Convert the watch assignment date into date time stamp or object for future filtering
+```{r}
+
+watch_users_df$watch_training_day <- as.POSIXct(watch_users_df$watch_assign_date, format = "%m/%d/%Y")
+
+
+```
+
+
+## Filter no watch users
+Filter out users who have never been assigned a watch
+```{r}
+
+`%!in%` <- Negate(`%in%`)
+
+trend_subset_df <- subset(trend_dr_df, trend_dr_df$participant_ID %!in% no_watch_users)
+
+```
+
+## Convert sleep wake times to date time objects
+```{r}
+
+trend_subset_df$current_wake_timestamp <- as.POSIXct(trend_subset_df$current_wake_time, format = "%Y-%m-%d %H:%M:%OS")
+trend_subset_df$current_sleep_timestamp <- as.POSIXct(trend_subset_df$current_sleep_time, format = "%Y-%m-%d %H:%M:%OS")
+
+```
+
+
+## Create a function to filter out user names with less than six months of data in total
+We are only looking at the users who have completed at least six months in the study. Thus, we will discard any user who has not completed six months yet
+```{r}
+
+keep_six_months_completed <- function(df, num_months){
+  num_days = num_months * 30
+  # count each 'name', assign result to an object 'tt'
+  tt <- table(df$participant_ID)
+  # subset data frame by a logical vector
+  # 'TRUE' rows are kept, 'FALSE' rows are removed.
+  # assign the result to a data frame with a new name
+  df2 <- subset(df, df$participant_ID %in% names(tt[tt >= num_days]))
+  
+  return(df2)
+}
+
+
+```
+
+```{r}
+trend_subset_df <- keep_six_months_completed(trend_subset_df, 6)
+```
+
+
+
+## Remove days with awkward sleep duration due to error
+Check summary first
+```{r}
+trend_subset_df$sleep_time_reported_hr <- as.numeric(trend_subset_df$sleep_time_reported_hr)
+```
+
+
+```{r}
+describe(trend_subset_df$sleep_time_reported_hr)
+
+```
+
+Next, assign a day number for each participant, grouped by participant ID and study mode. Use row_number() function for this.
+```{r}
+
+trend_subset_df <- trend_subset_df %>% group_by(participant_ID, study_mode) %>% mutate(day_num = row_number())
+
+```
+
+
+Remove awkward sleep times above 24 hours
+```{r}
+
+trend_subset_df <- subset(trend_subset_df, trend_subset_df$sleep_time_reported_hr <= 24.0)
+trend_subset_df <- subset(trend_subset_df, trend_subset_df$sleep_time_reported_hr >= 0.0)
+```
+
+
+## Split the dataframe into uEMA and EMA data frames
+use TIME and BURST days study mode for separation
+```{r}
+
+trend_time_df <- subset(trend_subset_df, trend_subset_df$study_mode == "TIME")
+trend_burst_df <- subset(trend_subset_df, trend_subset_df$study_mode == "BURST")
+
+```
+
+keep only watch assigned days and only days after the watch assignment took place
+```{r}
+trend_time_df <- subset(trend_time_df, trend_time_df$watch_assigned == "True")
+```
+
+
+
+Only include watch dates after the training date
+
+```{r}
+
+trend_time_df$date_stamp <- as.POSIXct(trend_time_df$date, format = "%Y-%m-%d")
+
+p_ids <- unique(trend_time_df$participant_ID)
+
+
+for (p_id in p_ids){
+  # print(p_id)
+  start_date <- watch_users_df$watch_training_day[watch_users_df$participant_id == p_id]
+  # print(start_date)
+  trend_time_df <- trend_time_df[!(trend_time_df$participant_ID == p_id & trend_time_df$date_stamp <= start_date), ]
+  # print(nrow(time_df))
+}
+
+```
+
+## Convert prompt counts to numeric
+```{r}
+
+trend_time_df$uema_prompted_num <- as.numeric(trend_time_df$uema_prompted_num)
+trend_time_df$uema_completed_num <- as.numeric(trend_time_df$uema_completed_num)
+
+
+```
+
+
+## Use sleep time reported to get the expected number of uEMA and burst EMA prompts
+
+Rubric to be used:
+uEMA num prompts = (24.0 - sleep_time - 0.50)*4.0 --> convert to integer
+burst EMA num prompts = (24.0 - sleep_time - 1.0)*1 --> convert to integet
+
+Define the constants
+```{r}
+
+uEMA_PER_HOUR = 4.0
+EMA_PER_HOUR = 1.0
+uEMA_BUFFER_HOUR = 0.5
+EMA_BUFFER_HOUR = 1.0
+
+DAY_HOUR = 24.0
+
+```
+
+Compute expected prompts for burst EMA
+```{r}
+
+
+trend_burst_df$burst_ema_expected_num <- as.integer((DAY_HOUR - trend_burst_df$sleep_time_reported_hr - EMA_BUFFER_HOUR)*EMA_PER_HOUR)
+
+```
+
+Compute expected promtps for uEMA
+```{r}
+
+trend_time_df$uema_expected_num <- as.integer((DAY_HOUR - trend_time_df$sleep_time_reported_hr - uEMA_BUFFER_HOUR)*uEMA_PER_HOUR)
+
+```
+
+## Convert response rate columns to numeric
+In trend_time_df and trend_burst_df, convert the burst_ema_completion_rate and burst_ema_compliance_rate columns to numeric (for trend_burst_df), and convert the uema_completion_rate and uema_compliance_rate columns to numeric (for trend_time_df). Similarly, convert date in both trend_burst_dr, and trend_time_df to POSIXct format in "%Y-%m-%d" format. 
+
+```{r}
+
+trend_burst_df$burst_ema_completion_rate <- as.numeric(trend_burst_df$burst_ema_completion_rate)
+trend_burst_df$burst_ema_compliance_rate <- as.numeric(trend_burst_df$burst_ema_compliance_rate)
+trend_time_df$uema_completion_rate <- as.numeric(trend_time_df$uema_completion_rate)
+trend_time_df$uema_compliance_rate <- as.numeric(trend_time_df$uema_compliance_rate)
+trend_burst_df$date_stamp <- as.POSIXct(trend_burst_df$date, format = "%Y-%m-%d")
+trend_time_df$date_stamp <- as.POSIXct(trend_time_df$date, format = "%Y-%m-%d")
+
+```
+
+Convert count columns to numeric:
+```{r}
+
+trend_burst_df$burst_ema_expected_num <- as.numeric(trend_burst_df$burst_ema_expected_num)
+trend_burst_df$burst_ema_original_prompted_num <- as.numeric(trend_burst_df$burst_ema_original_prompted_num)
+trend_burst_df$burst_ema_completed_num <- as.numeric(trend_burst_df$burst_ema_completed_num)
+
+trend_time_df$uema_expected_num <- as.numeric(trend_time_df$uema_expected_num)
+trend_time_df$uema_prompted_num <- as.numeric(trend_time_df$uema_prompted_num)
+trend_time_df$uema_completed_num <- as.numeric(trend_time_df$uema_completed_num)
+
+```
+
+Next, we will set the max for compliance and completion rate columns in trend_time_df and trend_burst_df to 1.0. This means, any compliance or completion rate that is > 1.0 will be set to 1.0.
+```{r}
+
+trend_burst_df$burst_ema_completion_rate[trend_burst_df$burst_ema_completion_rate > 1.0] <- 1.0
+trend_burst_df$burst_ema_compliance_rate[trend_burst_df$burst_ema_compliance_rate > 1.0] <- 1.0
+trend_time_df$uema_completion_rate[trend_time_df$uema_completion_rate > 1.0] <- 1.0
+trend_time_df$uema_compliance_rate[trend_time_df$uema_compliance_rate > 1.0] <- 1.0
+
+```
+
+Next, let's assign a day number for each participant in sequency. This is for both trend_time_df and trend_burst_df. 
+```{r}
+# trend_time_df <- trend_time_df %>% group_by(participant_ID) %>% mutate(day_num = row_number())
+# trend_burst_df <- trend_burst_df %>% group_by(participant_ID) %>% mutate(day_num = row_number())
+```
+
+
+
+if there are dates to be filtered because of technical malfunction, include that code here
+```{r}
+## Read the missing data file here
+missing_notes_file <- read.csv("/Users/adityaponnada/Downloads/time_study_data/missing_data_notes.csv", sep = ",", header = TRUE)
+
+missing_notes_file <- subset(missing_notes_file, missing_notes_file$ACTION == "EXCLUDE")
+
+
+# replace empty columns with the same date as the other column
+
+missing_notes_file$START_DATE <- ifelse(missing_notes_file$START_DATE == "", missing_notes_file$END_DATE, missing_notes_file$START_DATE)
+missing_notes_file$END_DATE <- ifelse(missing_notes_file$END_DATE == "", missing_notes_file$START_DATE, missing_notes_file$END_DATE)
+
+# Convert to date time objects
+missing_notes_file$START_DATE <- as.POSIXct(missing_notes_file$START_DATE, format = "%Y-%m-%d")
+missing_notes_file$END_DATE <- as.POSIXct(missing_notes_file$END_DATE, format = "%Y-%m-%d")
+
+missing_notes_file$P_ID <- paste0(missing_notes_file$P_ID, "@timestudy_com")
+
+
+```
+
+Filter out these dates from the combined daily report file - first the common dates
+```{r}
+
+all_pid_row <- subset(missing_notes_file, missing_notes_file$P_ID == "ALL_PARTICIPANTS@timestudy_com")
+
+global_start_date <- all_pid_row$START_DATE
+global_end_date <- all_pid_row$END_DATE
+
+trend_burst_df <- trend_burst_df[(trend_burst_df$date_stamp <= global_start_date | trend_burst_df$date_stamp >= global_end_date), ]
+
+
+```
+
+Filter out other phone exclusion dates for the burst_df
+```{r}
+
+
+
+filter_exclusion_dates <- function(report_df, missing_df, device){
+  missing_df <- subset(missing_df, missing_df$DEVICE == device | missing_df$DEVICE == "BOTH")
+  missing_df <- subset(missing_df, missing_df$P_ID != "ALL_PARTICIPANTS@timestudy_com")
+  pid_list <- unique(missing_df$P_ID)
+  for (pid in pid_list){
+    # print(paste0("participant: ", pid))
+    missing_pid_subset <- subset(missing_df, missing_df$P_ID == pid)
+    # print(nrow(missing_pid_subset))
+    for (i in 1:nrow(missing_pid_subset)){
+      # print(paste0("i: ", i))
+      start_date <- missing_pid_subset$START_DATE[i]
+      end_date <- missing_pid_subset$END_DATE[i]
+      # print(start_date)
+      # print(end_date)
+      # print(paste0("nrow before: ", nrow(report_df)))
+      test_subset <- subset(report_df, report_df$participant_ID == pid)
+      test_subset <- test_subset[(test_subset$date_stamp >= start_date & test_subset$date_stamp <= end_date), ]
+      # print(paste0("test_df nrow: ", nrow(test_subset)))
+      # print(paste0("row: ", test_subset$date_object))
+      report_df <- dplyr::setdiff(report_df, test_subset)
+      # report_df <- subset(report_df, !(report_df$participant_ID == pid & report_df$date_object >= start_date) | (report_df$participant_ID == pid & report_df$date_object <= end_date))
+      # print(paste0("nrow after: ", nrow(report_df)))
+    }
+  }
+  
+  return(report_df)
+}
+
+
+```
+
+Get burst and time df updated
+```{r}
+# original number of rows 6168
+
+trend_burst_df <- filter_exclusion_dates(trend_burst_df, missing_notes_file, "PHONE")
+
+# original number of rows 13415
+trend_time_df <- filter_exclusion_dates(trend_time_df, missing_notes_file, "WATCH")
+```
+
+Also check by removing outliers
+```{r}
+
+remove_outliers_from_df <- function(df){
+  outliers <- c("uniformlyharmfulbush@timestudy_com", "penpalsandbanklifting@timstudy_com")
+  df <- subset(df, df$participant_ID %!in% outliers)
+  return(df)
+}
+
+```
+
+Remove these outliers from both time and burst trend df
+```{r}
+
+trend_burst_df <- remove_outliers_from_df(trend_burst_df)
+trend_time_df <- remove_outliers_from_df(trend_time_df)
+
+```
+
+Create a separate plotting dataframes for both trend_burst_df and trend_time_df. For trend_bust_df, we will only keep burst compliance and comppletion rate columns, participant_ID, and day_num column. Similarly, for trend_time_df, we will keep the uema_compliance and completion rate columns.
+```{r}
+
+trend_burst_plot_df <- trend_burst_df[, c("participant_ID", "day_num", "burst_ema_completion_rate", "burst_ema_compliance_rate")]
+trend_time_plot_df <- trend_time_df[, c("participant_ID", "day_num", "uema_completion_rate", "uema_compliance_rate")]
+
+```
+
+Next, we will attach the participant status to these data frames. For this, we will get the status from participant_status for each ID and then add the status column to trend_time_df, and trend_burst_df.
+```{r}
+trend_burst_plot_df <- merge(trend_burst_plot_df, participant_status_df[, c("participant_id", "participant_status")], by.x = "participant_ID", by.y = "participant_id", all.x = TRUE)
+trend_time_plot_df <- merge(trend_time_plot_df, participant_status_df[, c("participant_id", "participant_status")], by.x = "participant_ID", by.y = "participant_id", all.x = TRUE)
+
+
+
+```
+
+
+Make the column names consistent for the plotting dataframes. Basically, they should have participant_ID, day_num, completion_rate, compliance_rate, and status
+```{r}
+
+names(trend_burst_plot_df) <- c("participant_ID", "day_num", "completion_rate", "compliance_rate", "participant_status")
+names(trend_time_plot_df) <- c("participant_ID", "day_num", "completion_rate", "compliance_rate", "participant_status")
+
+```
+
+
+Create a new dataframe with only the earliest day number from trend_time_plot_df
+```{r}
+trend_time_plot_df_earliest <- trend_time_plot_df %>% group_by(participant_ID) %>% filter(day_num == min(day_num)) %>% ungroup()
+```
+
+Summarize the day_num for trend_time_plot_df_earliest. Also get the 25th and 75th percentiles for the day_num column. This will give us the number of days it took for the data collection to start.
+```{r}
+
+describe(trend_time_plot_df_earliest$day_num)
+IQR(trend_time_plot_df_earliest$day_num)
+quantile(trend_time_plot_df_earliest$day_num, c(0.25, 0.75))
+
+```
+Now summarize the same info by participant status. Overall, it takes a median of 15 days for the actual data collection to start.
+```{r}
+
+describeBy(trend_time_plot_df_earliest$day_num, group = trend_time_plot_df_earliest$participant_status)
+
+```
+
+
+## Plot the seasonality plot for compliance and completion rate
+basically a facet of participant status 3 columns, each plot EMA compliance and completion rates
+```{r}
+
+
+plot_seasonality_ema <- function(df, status_type){
+  
+  df <- subset(df, df$participant_status == status_type)
+  
+  to_keep <- c("day_num", "compliance_rate", "completion_rate")
+  df <- df[, to_keep]
+  
+  df <- reshape2::melt(df, id.var='day_num')
+  
+  line_plot <- ggplot(data=df, aes(x=day_num, y=value, color = variable)) +
+    # geom_line(size = 1) +
+    # geom_point() +
+    theme_bw() +
+    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
+    scale_x_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 50)) +
+    # scale_x_discrete(labels = c("Home", "School", "Work", "Friend", "Unlabeled", "Transit", "Other")) +
+    # theme(axis.text.x = element_text(angle = 45, margin = margin(t = 5))) +
+    # stat_summary(geom="ribbon", fun.data=mean_cl_normal, conf.int=0.95, fill="lightblue", alpha = 0.5) +
+    # stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
+    #            width = 0.1, size = 1) +
+    geom_smooth(method='gam') +
+    # scale_colour_manual("", values = c(Compliance = "blue", Completion = "red")) +
+    # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
+    labs(x = "Days in study", y = "Rate", color = "Rate type") +
+    scale_color_manual(labels = c("Compliance rate", "Completion rate"), values = c("red", "blue")) +
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), axis.title.x=element_blank(), legend.text = element_text(size = 15)) +
+    ggtitle(status_type) +
+    theme(
+    legend.position = c(0.25, 0.15)
+    # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
+    #   color = "#D9D9D9",
+    #   size = 15)
+  ) +
+    guides(colour = guide_legend(nrow = 2))
+  
+  return(line_plot)
+  
+}
+
+```
+
+
+```{r}
+plot_seasonality_uema <- function(df, status_type){
+  
+  df <- subset(df, df$participant_status == status_type)
+  
+  to_keep <- c("day_num", "compliance_rate", "completion_rate")
+  df <- df[, to_keep]
+  
+  df <- reshape2::melt(df, id.var='day_num')
+  
+  line_plot <- ggplot(data=df, aes(x=day_num, y=value, color = variable)) +
+    # geom_line(size = 1) +
+    # geom_point() +
+    theme_bw() +
+    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
+    scale_x_continuous(limits = c(0, 260), breaks = seq(0, 260, by = 130)) +
+    # scale_x_discrete(labels = c("Home", "School", "Work", "Friend", "Unlabeled", "Transit", "Other")) +
+    # theme(axis.text.x = element_text(angle = 45, margin = margin(t = 5))) +
+    # stat_summary(geom="ribbon", fun.data=mean_cl_normal, conf.int=0.95, fill="lightblue", alpha = 0.5) +
+    # stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
+    #            width = 0.1, size = 1) +
+    geom_smooth(method="gam") +
+    # scale_colour_manual("", values = c(Compliance = "blue", Completion = "red")) +
+    # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
+    labs(x = "Days in study", y = "Rate", color = "Rate type") +
+    scale_color_manual(labels = c("Compliance rate", "Completion rate"), values = c("red", "blue")) +
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15), axis.title.x=element_blank(), legend.text = element_text(size = 15)) +
+    ggtitle(status_type) +
+    theme(
+    legend.position = c(0.25, 0.15)
+    # panel.grid.major.y = element_line(c(0, 25, 50, 75, 100),
+    #   color = "#D9D9D9",
+    #   size = 15)
+  ) +
+    guides(colour = guide_legend(nrow = 2))
+  
+  return(line_plot)
+  
+}
+```
+
+
+## Plot to get number of participants per day
+```{r}
+
+plot_num_part_days <- function(df, type, status_type){
+  
+  if (type == "uema"){
+    max_limit = 260
+    day_type = "µEMA"
+    
+  } else if (type == "ema"){
+    max_limit = 100
+    day_type = "EMA"
+  }
+  
+  split_val = max_limit/2
+  
+  df <- subset(df, df$participant_status == status_type)
+  
+  
+  keep_names <- c("participant_ID", "day_num")
+  df <- df[, keep_names]
+  
+  # df <- df %>% group_by(participant_ID) %>% mutate(actual_days = row_number())
+  # 
+  # 
+  # df <- df[, c("participant_ID", "actual_days")]
+  
+  
+  # agg_df <- distinct(df)
+  
+  agg_df <- aggregate(df$day_num, by = list(df$day_num), FUN = length)
+  names(agg_df) <- c("Days", "Num_Ps")
+  
+  agg_df$Days <- as.numeric(agg_df$Days)
+  
+  # agg_df <- summarise(group_by(df,Participant_ID, EXPOSURE_DAY_NO),length(Participant_ID))
+  # names(agg_df) <- c("Participant_ID", "max_expo_day", "COUNT")
+  # 
+  # agg_df <- agg_df %>%
+  # group_by(Participant_ID, max_expo_day) %>%
+  # mutate(COMPLETION_RATE = COUNT / sum(COUNT))
+  # 
+  # agg_df <- subset(agg_df, agg_df$ANSWER_STATUS == "Answered")
+  # 
+  # agg_df$max_expo_day <- as.numeric(agg_df$max_expo_day)
+  # 
+  line_plot <- ggplot(data=agg_df) +
+    # geom_line(aes(x=Days, y=Num_Ps), size = 1) +
+    geom_smooth(method='gam', aes(x=Days, y=Num_Ps), color='black') + 
+    # geom_point() +
+    theme_bw() +
+    scale_y_continuous(limits = c(0, 150), breaks = seq(0, 150, by = 50)) +
+    scale_x_continuous(limits = c(0, max_limit), breaks = seq(0, max_limit, by = split_val)) +
+    # scale_x_discrete(labels = c("Home", "School", "Work", "Friend", "Unlabeled", "Transit", "Other")) +
+    # theme(axis.text.x = element_text(angle = 45, margin = margin(t = 5))) +
+    # stat_summary(geom="ribbon", fun.data=mean_cl_normal, conf.int=0.95, fill="lightblue", alpha = 0.5) +
+    # stat_summary(fun.y = mean, geom = "line", aes(ymax= ..y.., ymin = ..y..),
+    #            width = 0.1, size = 1) +
+    # scale_y_continuous(breaks = c(0, 0.5, 1.0), label = c("0", "0.5", "1.0")) +
+    labs(x = paste0(day_type, " days"), y = "No. participants") +
+    theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 15, colour = "black"), axis.text.y = element_text(size = 15, colour = "black"), title = element_text(size = 15)) 
+  # + ggtitle(paste0(day_type, " ", status_type))
+   
+  
+   # ylim(0, 1) +
+    # xlim(0, 300)
+  
+  # box_plot <- ggplot(agg_df, aes(x=DAYS_IN_THE_STUDY, y=COMPLETION_RATE)) + 
+  # geom_boxplot() +
+  #   ggtitle("Completion | Days in the study")
+  # 
+  # summary_object <- describeBy(agg_df$COMPLETION_RATE, group = agg_df$DAYS_IN_THE_STUDY)
+  # 
+  # print(summary_object)
+  
+  # return_list <- c(summary_object, box_plot)
+  
+  return(line_plot)
+}
+
+```
+
+## Put the plots together
+```{r}
+
+library(ggpubr)
+
+uema_com_plot <- plot_seasonality_uema(trend_time_plot_df, "Completed")
+uema_wdr_plot <- plot_seasonality_uema(trend_time_plot_df, "Withdrew")
+uema_unen_plot <- plot_seasonality_uema(trend_time_plot_df, "Unenrolled")
+
+ema_com_plot <- plot_seasonality_ema(trend_burst_plot_df, "Completed")
+ema_wdr_plot <- plot_seasonality_ema(trend_burst_plot_df, "Withdrew")
+ema_unen_plot <- plot_seasonality_ema(trend_burst_plot_df, "Unenrolled")
+
+uema_num_com <- plot_num_part_days(trend_time_plot_df, "uema", "Completed")
+uema_num_wdr <- plot_num_part_days(trend_time_plot_df, "uema", "Withdrew")
+uema_num_unen <- plot_num_part_days(trend_time_plot_df, "uema", "Unenrolled")
+
+ema_num_com <- plot_num_part_days(trend_burst_plot_df, "ema", "Completed")
+ema_num_wdr <- plot_num_part_days(trend_burst_plot_df, "ema", "Withdrew")
+ema_num_unen <- plot_num_part_days(trend_burst_plot_df, "ema", "Unenrolled")
+
+
+uema_arranged <- ggarrange(uema_com_plot, uema_wdr_plot, uema_unen_plot, uema_num_com, uema_num_wdr, uema_num_unen, ncol = 3, nrow = 2)
+
+ema_arranged <- ggarrange(ema_com_plot, ema_wdr_plot, ema_unen_plot, ema_num_com, ema_num_wdr, ema_num_unen, ncol = 3, nrow = 2)
+
+```

@@ -180,9 +180,11 @@ daily_report_subset <- keep_six_months_completed(daily_report_subset, 6)
 ## Remove days with awkward sleep duration due to error
 Check summary first
 ```{r}
-
 daily_report_subset$sleep_time_reported_hr <- as.numeric(daily_report_subset$sleep_time_reported_hr)
+```
 
+
+```{r}
 describe(daily_report_subset$sleep_time_reported_hr)
 
 ```

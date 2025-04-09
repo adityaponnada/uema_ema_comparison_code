@@ -711,3 +711,36 @@ mean_residual_plot <- ggplot(residual_df, aes(x = mean_residual)) +
 
 ```
 
+Get a table of mean and standard deviation of the variances for each construct. Compute this for both uEMA and EMA
+```{r}
+
+uema_summary_df <- data.frame()
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  construct <- paste0("uema_", construct)
+  mean_var <- mean(uema_wide_df[[construct]], na.rm = TRUE)
+  sd_var <- sd(uema_wide_df[[construct]], na.rm = TRUE)
+  
+  uema_summary_df <- rbind(uema_summary_df, data.frame(construct = construct, mean_var = mean_var, sd_var = sd_var))
+}
+
+ema_summary_df <- data.frame()
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  construct <- paste0("ema_", construct)
+  mean_var <- mean(ema_wide_df[[construct]], na.rm = TRUE)
+  sd_var <- sd(ema_wide_df[[construct]], na.rm = TRUE)
+  
+  ema_summary_df <- rbind(ema_summary_df, data.frame(construct = construct, mean_var = mean_var, sd_var = sd_var))
+}
+
+## Also add for ema_3p_wide_df
+ema_3p_summary_df <- data.frame()
+for (construct in c("sad", "happy", "fatigue", "relax", "tense", "stress", "frust", "nervous", "focus", "control", "routine")) {
+  construct <- paste0("ema_", construct)
+  mean_var <- mean(ema_3p_wide_df[[construct]], na.rm = TRUE)
+  sd_var <- sd(ema_3p_wide_df[[construct]], na.rm = TRUE)
+  
+  ema_3p_summary_df <- rbind(ema_3p_summary_df, data.frame(construct = construct, mean_var = mean_var, sd_var = sd_var))
+}
+
+```
+
