@@ -189,12 +189,6 @@ describe(daily_report_subset$sleep_time_reported_hr)
 
 ```
 
-Remove awkward sleep times above 24 hours
-```{r}
-
-daily_report_subset <- subset(daily_report_subset, daily_report_subset$sleep_time_reported_hr <= 24.0)
-
-```
 
 
 ## Split the dataframe into uEMA and EMA data frames
@@ -458,6 +452,58 @@ burst_df <- merge(x = burst_df, y = participant_status_df[ , c("participant_ID",
 
 
 ```
+
+
+## prep shareable data for reviewers
+First, we will only keep selective columns for time df and burst df. These columns are:
+1. participant_ID
+2. date
+3. study_mode
+4. date_stamp
+5. uema_compliance_rate
+6. uema_completion_rate
+7. burst_ema_compliance_rate
+8. burst_ema_completion_rate
+9. participant_status
+
+
+
+```{r}
+
+
+time_share_df <- time_df[, c("participant_ID", "date", "study_mode", "uema_compliance_rate", "uema_completion_rate", "burst_ema_compliance_rate", "burst_ema_completion_rate", "participant_status")]
+burst_share_df <- burst_df[, c("participant_ID", "date", "study_mode", "uema_compliance_rate", "uema_completion_rate", "burst_ema_compliance_rate", "burst_ema_completion_rate", "participant_status")]
+
+```
+
+
+Next combine the two dfs using rbind
+```{r}
+share_df <- rbind(time_share_df, burst_share_df)
+```
+
+Now, order them based on participant_ID and then date nested within participant_ID
+```{r}
+share_df <- arrange(share_df, participant_ID, date)
+```
+
+Now, change the participant_ID column where each ID become P1, P2 ... etc. Apply P1, P2 based on the group by participant_ID
+```{r}
+
+share_df$participant_ID <- as.character(share_df$participant_ID)
+share_df$participant_ID <- as.factor(share_df$participant_ID)
+share_df$participant_ID <- as.numeric(share_df$participant_ID)
+share_df$participant_ID <- paste0("P", share_df$participant_ID)
+
+```
+
+Finally, save the dataframe to a file
+```{r}
+
+write.csv(share_df, file = "/Users/adityaponnada/Downloads/time_study_data/shareable_time_burst_df.csv", row.names = FALSE)
+
+```
+
 
 Write a code to get the list of participants from time_df, whose participant status is 'completed' AND the maximum dayno value is 190. First group by participants to get the max day no, then filter by dayno less than 190. The final dataframe should return the participant ID and their maximum day_no value
 ```{r}
